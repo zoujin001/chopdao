@@ -189,12 +189,12 @@ function generateEquipmentQuality() {
     
     // 计算各品质概率
     const weights = {
-        凡品: Math.max(10, 70 - luck * 0.5),
-        灵品: 20 + luck * 0.3,
-        仙品: 8 + luck * 0.15 + realmBonus * 10,
-        神品: 1.9 + luck * 0.05 + realmBonus * 5,
-        圣品: 0.1 + luck * 0.01 + realmBonus * 2,
-        混沌: realmLevel >= 5 ? 0.01 + realmBonus * 0.5 : 0
+        Common: Math.max(10, 70 - luck * 0.5),
+        Uncommon: 20 + luck * 0.3,
+        Rare: 8 + luck * 0.15 + realmBonus * 10,
+        Epic: 1.9 + luck * 0.05 + realmBonus * 5,
+        Legendary: 0.1 + luck * 0.01 + realmBonus * 2,
+        Chaos: realmLevel >= 5 ? 0.01 + realmBonus * 0.5 : 0
     };
     
     // 加权随机
@@ -208,13 +208,81 @@ function generateEquipmentQuality() {
         }
     }
     
-    return '凡品'; // 默认返回凡品
+    return 'Common'; // 默认返回Common
+}
+
+// 计算并显示各品质装备的掉落概率
+function showDropRates() {
+    const luck = gameData.stats.luck;
+    const realmLevel = getRealmLevel();
+    const realmBonus = realmLevel * 0.01; // 每境界+1%
+    
+    // 计算各品质概率
+    const weights = {
+        Common: Math.max(10, 70 - luck * 0.5),
+        Uncommon: 20 + luck * 0.3,
+        Rare: 8 + luck * 0.15 + realmBonus * 10,
+        Epic: 1.9 + luck * 0.05 + realmBonus * 5,
+        Legendary: 0.1 + luck * 0.01 + realmBonus * 2,
+        Chaos: realmLevel >= 5 ? 0.01 + realmBonus * 0.5 : 0
+    };
+    
+    // 计算总权重
+    const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+    
+    // 计算各品质的百分比概率
+    const dropRates = {};
+    for (const [quality, weight] of Object.entries(weights)) {
+        dropRates[quality] = (weight / totalWeight) * 100;
+    }
+    
+    // 构建概率显示HTML
+    let html = `
+        <h3>🎲 装备掉落概率</h3>
+        <p>当前境界: ${gameData.realm.stage}${gameData.realm.level}阶</p>
+        <p>幸运值: ${luck}</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr style="background-color: #f2f2f2;">
+                <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">品质</th>
+                <th style="padding: 8px; text-align: right; border: 1px solid #ddd;">概率</th>
+            </tr>
+    `;
+    
+    const qualityOrder = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Chaos'];
+    const qualityNames = {
+        Common: '⚪ 凡品',
+        Uncommon: '🟢 灵品',
+        Rare: '🔵 仙品',
+        Epic: '🟣 神品',
+        Legendary: '🟠 圣品',
+        Chaos: '🔴 混沌'
+    };
+    
+    qualityOrder.forEach(quality => {
+        if (dropRates[quality] > 0) {
+            html += `
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${qualityNames[quality]}</td>
+                    <td style="padding: 8px; text-align: right; border: 1px solid #ddd;">${dropRates[quality].toFixed(2)}%</td>
+                </tr>
+            `;
+        }
+    });
+    
+    html += `
+        </table>
+        <button onclick="closePopup()" style="margin-top: 15px; padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">关闭</button>
+    `;
+    
+    const popupBody = document.getElementById('popup-body');
+    popupBody.innerHTML = html;
+    document.getElementById('popup').style.display = 'block';
 }
 
 // 获取境界等级
 function getRealmLevel() {
     const stageMap = {
-        '凡人': 0,
+        'Mortal': 0,
         '炼气': 1,
         '筑基': 2,
         '金丹': 3,
