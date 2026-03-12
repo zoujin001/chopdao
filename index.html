@@ -11,10 +11,10 @@
     <div id="status-bar">
         <table>
             <tr>
-                <td>寿元: <span id="lifespan">100/100</span></td>
-                <td>境界: <span id="realm">凡人一阶</span></td>
-                <td>修为: <span id="exp">0/100</span></td>
-                <td>灵石: <span id="stone">0</span></td>
+                <td>🧬 寿元: <span id="lifespan">100/100</span></td>
+                <td>🏆 境界: <span id="realm">凡人一阶</span></td>
+                <td>⭐ 修为: <span id="exp">0/100</span></td>
+                <td>💎 灵石: <span id="stone">0</span></td>
             </tr>
         </table>
     </div>
@@ -30,25 +30,25 @@
                 </div>
                 <div id="tree-visual">🌲</div>
                 <div id="tree-info">
-                    <p>普通树木</p>
-                    <p>血量: <span id="tree-hp">100/100</span></p>
+                    <p>🌲 普通树木</p>
+                    <p>❤️ 血量: <span id="tree-hp">100/100</span></p>
                 </div>
             </div>
             <div id="chopping-info">
                 <table>
                     <tr>
-                        <th>点击收益</th>
-                        <td>木材: <span id="wood-per-hit">1-3</span></td>
-                        <td>修为: <span id="exp-per-hit">1</span></td>
-                        <td>灵石: <span id="stone-per-hit">0-1</span></td>
+                        <th>🎯 点击收益</th>
+                        <td>🪵 木材: <span id="wood-per-hit">1-3</span></td>
+                        <td>⭐ 修为: <span id="exp-per-hit">1</span></td>
+                        <td>💎 灵石: <span id="stone-per-hit">0-1</span></td>
                     </tr>
                     <tr>
-                        <th>自动收益</th>
-                        <td>木材/秒: <span id="wood-per-second">0</span></td>
-                        <td>修为/秒: <span id="exp-per-second">0</span></td>
+                        <th>⚡ 自动收益</th>
+                        <td>🪵 木材/秒: <span id="wood-per-second">0</span></td>
+                        <td>⭐ 修为/秒: <span id="exp-per-second">0</span></td>
                     </tr>
                     <tr>
-                        <th>连击数</th>
+                        <th>🔥 连击数</th>
                         <td><span id="combo">0</span></td>
                         <td>加成: <span id="combo-bonus">+0%</span></td>
                     </tr>
@@ -60,7 +60,7 @@
         <div id="system-tables">
             <!-- 境界系统 -->
             <div class="system-table">
-                <h3>境界系统</h3>
+                <h3>🏆 境界系统</h3>
                 <table>
                     <tr>
                         <th>当前境界</th>
@@ -75,20 +75,20 @@
                         <td><button onclick="openRealmPopup()">修炼</button></td>
                     </tr>
                     <tr>
-                        <td colspan="4">效果: 攻击+1</td>
+                        <td colspan="4">⚔️ 效果: 攻击+1</td>
                     </tr>
                     <tr>
-                        <td colspan="4">下一阶: 凡人二阶</td>
+                        <td colspan="4">📈 下一阶: 凡人二阶</td>
                     </tr>
                     <tr>
-                        <td colspan="4">突破成功率: 100%</td>
+                        <td colspan="4">🎲 突破成功率: 100%</td>
                     </tr>
                 </table>
             </div>
 
             <!-- 装备系统 -->
             <div class="system-table">
-                <h3>装备系统</h3>
+                <h3>🛡️ 装备系统</h3>
                 <table>
                     <tr>
                         <th>部位</th>
@@ -97,30 +97,30 @@
                         <th>操作</th>
                     </tr>
                     <tr>
-                        <td>斧头</td>
+                        <td>🪓 斧头</td>
                         <td id="weapon-name">生锈斧头 Lv.1</td>
-                        <td id="weapon-stats">攻击+5</td>
+                        <td id="weapon-stats">⚔️ 攻击+5</td>
                         <td>
                             <button onclick="strengthenWeapon()">强化</button>
                             <button onclick="unequipWeapon()">卸下</button>
                         </td>
                     </tr>
                     <tr>
-                        <td>道袍</td>
+                        <td>🧥 道袍</td>
                         <td id="armor-name">无</td>
-                        <td id="armor-stats">生命+0 木材+0%</td>
+                        <td id="armor-stats">❤️ 生命+0 🪵 木材+0%</td>
                         <td><button onclick="equipArmor()">装备</button></td>
                     </tr>
                     <tr>
-                        <td>戒指</td>
+                        <td>💍 戒指</td>
                         <td id="ring-name">无</td>
-                        <td id="ring-stats">攻速+0% 灵石+0%</td>
+                        <td id="ring-stats">⚡ 攻速+0% 💎 灵石+0%</td>
                         <td><button onclick="equipRing()">装备</button></td>
                     </tr>
                     <tr>
-                        <td>护符</td>
+                        <td>🔮 护符</td>
                         <td id="amulet-name">无</td>
-                        <td id="amulet-stats">幸运+0 修为+0%</td>
+                        <td id="amulet-stats">🍀 幸运+0 ⭐ 修为+0%</td>
                         <td><button onclick="equipAmulet()">装备</button></td>
                     </tr>
                 </table>
@@ -128,7 +128,7 @@
 
             <!-- 道童系统 -->
             <div class="system-table">
-                <h3>道童系统</h3>
+                <h3>🧒 道童系统</h3>
                 <table>
                     <tr>
                         <th>道童</th>
@@ -138,24 +138,24 @@
                         <th>操作</th>
                     </tr>
                     <tr>
-                        <td>砍柴童子</td>
+                        <td>🧒 砍柴童子</td>
                         <td id="servant1-status">未招募</td>
-                        <td>自动: 1次/秒</td>
-                        <td>500灵石</td>
+                        <td>⚡ 自动: 1次/秒</td>
+                        <td>💎 500灵石</td>
                         <td><button onclick="recruitServant(1)">招募</button></td>
                     </tr>
                     <tr>
-                        <td>伐木匠人</td>
+                        <td>👨 伐木匠人</td>
                         <td id="servant2-status">未招募</td>
-                        <td>自动: 3次/秒 木材+10%</td>
-                        <td>2000灵石</td>
+                        <td>⚡ 自动: 3次/秒 🪵 木材+10%</td>
+                        <td>💎 2000灵石</td>
                         <td><button onclick="recruitServant(2)">招募</button></td>
                     </tr>
                     <tr>
-                        <td>灵木师</td>
+                        <td>🧙 灵木师</td>
                         <td id="servant3-status">未招募</td>
-                        <td>自动: 5次/秒 双倍木材</td>
-                        <td>10000灵石</td>
+                        <td>⚡ 自动: 5次/秒 🪵 双倍木材</td>
+                        <td>💎 10000灵石</td>
                         <td><button onclick="recruitServant(3)">招募</button></td>
                     </tr>
                 </table>
@@ -165,12 +165,12 @@
 
     <!-- 底部功能栏 -->
     <div id="bottom-bar">
-        <button onclick="openInventory()">背包</button>
-        <button onclick="openSkills()">神通</button>
-        <button onclick="openChallenges()">挑战</button>
-        <button onclick="openMap()">地图</button>
-        <button onclick="openShop()">商店</button>
-        <button onclick="openSettings()">设置</button>
+        <button onclick="openInventory()">🎒 背包</button>
+        <button onclick="openSkills()">✨ 神通</button>
+        <button onclick="openChallenges()">⚔️ 挑战</button>
+        <button onclick="openMap()">🗺️ 地图</button>
+        <button onclick="openShop()">🛒 商店</button>
+        <button onclick="openSettings()">⚙️ 设置</button>
     </div>
 
     <!-- 弹窗 -->

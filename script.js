@@ -266,7 +266,14 @@ function checkRealmBreakthrough() {
 
 // 境界突破
 function breakthroughRealm() {
-    gameData.realm.exp -= gameData.realm.maxExp;
+    // 检查修为是否足够
+    if (gameData.realm.exp < gameData.realm.maxExp) {
+        alert("修为不足，无法突破！");
+        return;
+    }
+    
+    // 确保修为不会变成负数
+    gameData.realm.exp = Math.max(0, gameData.realm.exp - gameData.realm.maxExp);
     gameData.realm.level++;
     
     // 计算新的境界和最大修为
@@ -286,6 +293,11 @@ function breakthroughRealm() {
     
     gameData.realm.maxExp = 100 * Math.pow(1.5, gameData.realm.level - 1);
     gameData.stats.attack += 1; // 每突破一次攻击+1
+    
+    // 检查是否需要连续突破
+    if (gameData.realm.exp >= gameData.realm.maxExp) {
+        breakthroughRealm();
+    }
     
     updateUI();
     saveGame();
@@ -326,6 +338,7 @@ function recruitServant(id) {
 // 打开境界突破弹窗
 function openRealmPopup() {
     const popupBody = document.getElementById('popup-body');
+    const canBreakthrough = gameData.realm.exp >= gameData.realm.maxExp;
     popupBody.innerHTML = `
         <h3>境界突破</h3>
         <table>
@@ -341,7 +354,7 @@ function openRealmPopup() {
                 <td>${Math.floor(gameData.realm.maxExp)}修为</td>
                 <td>100%</td>
                 <td>无</td>
-                <td><button onclick="breakthroughRealm(); closePopup();">突破</button></td>
+                <td><button ${!canBreakthrough ? 'disabled' : ''} onclick="breakthroughRealm(); closePopup();">${canBreakthrough ? '突破' : '修为不足'}</button></td>
             </tr>
         </table>
     `;
@@ -688,6 +701,7 @@ function closePopup() {
 // 处理键盘事件
 function handleKeyPress(e) {
     if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault(); // 阻止默认行为，防止空格键导致页面滚动
         chopTree();
     }
 }
