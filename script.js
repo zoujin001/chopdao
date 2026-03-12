@@ -320,6 +320,66 @@ function strengthenWeapon() {
     }
 }
 
+// 卸下装备
+function unequipWeapon() {
+    if (confirm('确定要卸下斧头吗？')) {
+        gameData.equipment.weapon = null;
+        updateUI();
+        saveGame();
+    }
+}
+
+function equipArmor() {
+    // 打开装备选择界面
+    const popupBody = document.getElementById('popup-body');
+    popupBody.innerHTML = `
+        <h3>装备道袍</h3>
+        <p>当前装备: ${gameData.equipment.armor ? gameData.equipment.armor.name : '无'}</p>
+        <button onclick="unequipArmor(); closePopup();">卸下当前装备</button>
+    `;
+    document.getElementById('popup').style.display = 'block';
+}
+
+function unequipArmor() {
+    gameData.equipment.armor = null;
+    updateUI();
+    saveGame();
+}
+
+function equipRing() {
+    // 打开装备选择界面
+    const popupBody = document.getElementById('popup-body');
+    popupBody.innerHTML = `
+        <h3>装备戒指</h3>
+        <p>当前装备: ${gameData.equipment.ring ? gameData.equipment.ring.name : '无'}</p>
+        <button onclick="unequipRing(); closePopup();">卸下当前装备</button>
+    `;
+    document.getElementById('popup').style.display = 'block';
+}
+
+function unequipRing() {
+    gameData.equipment.ring = null;
+    updateUI();
+    saveGame();
+}
+
+function equipAmulet() {
+    // 打开装备选择界面
+    const popupBody = document.getElementById('popup-body');
+    popupBody.innerHTML = `
+        <h3>装备护符</h3>
+        <p>当前装备: ${gameData.equipment.amulet ? gameData.equipment.amulet.name : '无'}</p>
+        <button onclick="unequipAmulet(); closePopup();">卸下当前装备</button>
+    `;
+    document.getElementById('popup').style.display = 'block';
+}
+
+function unequipAmulet() {
+    gameData.equipment.amulet = null;
+    updateUI();
+    saveGame();
+}
+
 // 招募道童
 function recruitServant(id) {
     const servant = servantsData.find(s => s.id === id);
@@ -491,7 +551,7 @@ function openMap() {
 function openShop() {
     const popupBody = document.getElementById('popup-body');
     popupBody.innerHTML = `
-        <h3>商店</h3>
+        <h3>🛒 商店</h3>
         <table>
             <tr>
                 <th>道具</th>
@@ -500,28 +560,46 @@ function openShop() {
                 <th>操作</th>
             </tr>
             <tr>
-                <td>突破丹</td>
+                <td>⚡ 突破丹</td>
                 <td>境界突破必备</td>
-                <td>1000灵石</td>
+                <td>💎 1000灵石</td>
                 <td><button onclick="buyItem('突破丹', 1000)">购买</button></td>
             </tr>
             <tr>
-                <td>强化石</td>
+                <td>🔨 强化石</td>
                 <td>装备强化材料</td>
-                <td>100灵石</td>
+                <td>💎 100灵石</td>
                 <td><button onclick="buyItem('强化石', 100, 10)">购买×10</button></td>
             </tr>
             <tr>
-                <td>延寿丹</td>
+                <td>🧬 延寿丹</td>
                 <td>寿元+50</td>
-                <td>500灵石</td>
+                <td>💎 500灵石</td>
                 <td><button onclick="buyItem('延寿丹', 500)">购买</button></td>
             </tr>
             <tr>
-                <td>灵宠经验丹</td>
+                <td>🐾 灵宠经验丹</td>
                 <td>灵宠升级</td>
-                <td>200灵石</td>
+                <td>💎 200灵石</td>
                 <td><button onclick="buyItem('灵宠经验丹', 200, 10)">购买×10</button></td>
+            </tr>
+            <tr>
+                <td>🧥 新手道袍</td>
+                <td>❤️ 生命+10 🪵 木材+5%</td>
+                <td>💎 500灵石</td>
+                <td><button onclick="buyEquipment('armor', {id: 2, name: '新手道袍', quality: '凡品', level: 1, stats: {hp: 10, woodBonus: 0.05}})">购买</button></td>
+            </tr>
+            <tr>
+                <td>💍 青铜戒指</td>
+                <td>⚡ 攻速+5% 💎 灵石+5%</td>
+                <td>💎 800灵石</td>
+                <td><button onclick="buyEquipment('ring', {id: 3, name: '青铜戒指', quality: '凡品', level: 1, stats: {speed: 0.05, stoneBonus: 0.05}})">购买</button></td>
+            </tr>
+            <tr>
+                <td>🔮 普通护符</td>
+                <td>🍀 幸运+1 ⭐ 修为+5%</td>
+                <td>💎 1000灵石</td>
+                <td><button onclick="buyEquipment('amulet', {id: 4, name: '普通护符', quality: '凡品', level: 1, stats: {luck: 1, expBonus: 0.05}})">购买</button></td>
             </tr>
         </table>
     `;
@@ -542,6 +620,32 @@ function buyItem(name, price, count = 1) {
         }
         updateUI();
         saveGame();
+    } else {
+        alert("灵石不足！");
+    }
+}
+
+// 购买装备
+function buyEquipment(slot, equipment) {
+    let price = 0;
+    switch(slot) {
+        case 'armor':
+            price = 500;
+            break;
+        case 'ring':
+            price = 800;
+            break;
+        case 'amulet':
+            price = 1000;
+            break;
+    }
+    
+    if (gameData.resources.stone >= price) {
+        gameData.resources.stone -= price;
+        gameData.equipment[slot] = equipment;
+        updateUI();
+        saveGame();
+        alert(`成功购买并装备了${equipment.name}！`);
     } else {
         alert("灵石不足！");
     }
@@ -742,7 +846,37 @@ function updateUI() {
     // 更新装备系统
     const weapon = gameData.equipment.weapon;
     document.getElementById('weapon-name').textContent = `${weapon.name} Lv.${weapon.level}`;
-    document.getElementById('weapon-stats').textContent = `攻击+${weapon.stats.atk}`;
+    document.getElementById('weapon-stats').textContent = `⚔️ 攻击+${weapon.stats.atk}`;
+    
+    // 更新道袍
+    const armor = gameData.equipment.armor;
+    if (armor) {
+        document.getElementById('armor-name').textContent = `${armor.name} Lv.${armor.level}`;
+        document.getElementById('armor-stats').textContent = `❤️ 生命+${armor.stats.hp} 🪵 木材+${(armor.stats.woodBonus * 100).toFixed(0)}%`;
+    } else {
+        document.getElementById('armor-name').textContent = "无";
+        document.getElementById('armor-stats').textContent = "❤️ 生命+0 🪵 木材+0%";
+    }
+    
+    // 更新戒指
+    const ring = gameData.equipment.ring;
+    if (ring) {
+        document.getElementById('ring-name').textContent = `${ring.name} Lv.${ring.level}`;
+        document.getElementById('ring-stats').textContent = `⚡ 攻速+${(ring.stats.speed * 100).toFixed(0)}% 💎 灵石+${(ring.stats.stoneBonus * 100).toFixed(0)}%`;
+    } else {
+        document.getElementById('ring-name').textContent = "无";
+        document.getElementById('ring-stats').textContent = "⚡ 攻速+0% 💎 灵石+0%";
+    }
+    
+    // 更新护符
+    const amulet = gameData.equipment.amulet;
+    if (amulet) {
+        document.getElementById('amulet-name').textContent = `${amulet.name} Lv.${amulet.level}`;
+        document.getElementById('amulet-stats').textContent = `🍀 幸运+${amulet.stats.luck} ⭐ 修为+${(amulet.stats.expBonus * 100).toFixed(0)}%`;
+    } else {
+        document.getElementById('amulet-name').textContent = "无";
+        document.getElementById('amulet-stats').textContent = "🍀 幸运+0 ⭐ 修为+0%";
+    }
     
     // 更新道童系统
     servantsData.forEach(servant => {
@@ -753,6 +887,61 @@ function updateUI() {
             statusElement.textContent = "未招募";
         }
     });
+    
+    // 更新角色属性
+    updateCharacterStats();
+}
+
+// 更新角色属性
+function updateCharacterStats() {
+    // 计算攻击力
+    let attack = gameData.stats.attack;
+    if (gameData.equipment.weapon) {
+        attack += gameData.equipment.weapon.stats.atk;
+    }
+    document.getElementById('attack-value').textContent = attack;
+    
+    // 计算生命值
+    let hp = gameData.lifespan.max;
+    if (gameData.equipment.armor && gameData.equipment.armor.stats.hp) {
+        hp += gameData.equipment.armor.stats.hp;
+    }
+    document.getElementById('hp-value').textContent = hp;
+    
+    // 计算攻速
+    let speed = 100;
+    if (gameData.equipment.ring && gameData.equipment.ring.stats.speed) {
+        speed += gameData.equipment.ring.stats.speed * 100;
+    }
+    document.getElementById('speed-value').textContent = `${speed.toFixed(0)}%`;
+    
+    // 计算幸运
+    let luck = 0;
+    if (gameData.equipment.amulet && gameData.equipment.amulet.stats.luck) {
+        luck += gameData.equipment.amulet.stats.luck;
+    }
+    document.getElementById('luck-value').textContent = luck;
+    
+    // 计算木材加成
+    let woodBonus = 0;
+    if (gameData.equipment.armor && gameData.equipment.armor.stats.woodBonus) {
+        woodBonus += gameData.equipment.armor.stats.woodBonus * 100;
+    }
+    document.getElementById('wood-bonus-value').textContent = `${woodBonus.toFixed(0)}%`;
+    
+    // 计算灵石加成
+    let stoneBonus = 0;
+    if (gameData.equipment.ring && gameData.equipment.ring.stats.stoneBonus) {
+        stoneBonus += gameData.equipment.ring.stats.stoneBonus * 100;
+    }
+    document.getElementById('stone-bonus-value').textContent = `${stoneBonus.toFixed(0)}%`;
+    
+    // 计算修为加成
+    let expBonus = 0;
+    if (gameData.equipment.amulet && gameData.equipment.amulet.stats.expBonus) {
+        expBonus += gameData.equipment.amulet.stats.expBonus * 100;
+    }
+    document.getElementById('exp-bonus-value').textContent = `${expBonus.toFixed(0)}%`;
 }
 
 // 初始化游戏
