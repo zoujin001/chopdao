@@ -327,15 +327,19 @@ function showEquipmentDrop(equipment) {
     
     // 构建副属性文本
     let subStatsText = '';
-    for (const [stat, value] of Object.entries(equipment.subStats)) {
+    for (const [stat, value] of Object.entries(equipment.subStats || {})) {
         const statNames = {
             woodBonus: '木材+',
             stoneBonus: '灵石+',
             expBonus: '修为+',
             crit: '暴击率+'
         };
-        subStatsText += `${statNames[stat]}${(value * 100).toFixed(0)}% `;
+        subStatsText += `${statNames[stat]}${((value || 0) * 100).toFixed(0)}% `;
     }
+    
+    // 处理主属性显示
+    const mainStatKey = Object.keys(equipment.stats || {})[0];
+    const mainStatValue = Object.values(equipment.stats || {})[0] || 0;
     
     popupBody.innerHTML = `
         <h3>🎉 获得装备！</h3>
@@ -352,10 +356,10 @@ function showEquipmentDrop(equipment) {
                 <td>部位:</td>
                 <td>${equipmentSlots[equipment.slot].name}</td>
             </tr>
-            <tr>
+            ${mainStatKey ? `<tr>
                 <td>主属性:</td>
-                <td>${getStatName(Object.keys(equipment.stats)[0])}+${Object.values(equipment.stats)[0]}</td>
-            </tr>
+                <td>${getStatName(mainStatKey)}+${mainStatValue}</td>
+            </tr>` : ''}
             ${subStatsText ? `<tr>
                 <td>副属性:</td>
                 <td>${subStatsText}</td>
@@ -399,6 +403,7 @@ function equipDrop(id) {
 function addToInventory(id) {
     if (window.tempEquipment) {
         const equipment = window.tempEquipment;
+        equipment.count = 1; // 添加数量属性
         gameData.inventory.push(equipment);
         updateUI();
         saveGame();
@@ -711,9 +716,15 @@ function strengthenWeapon() {
 // 卸下装备
 function unequipWeapon() {
     if (confirm('确定要卸下斧头吗？')) {
-        gameData.equipment.weapon = null;
-        updateUI();
-        saveGame();
+        if (gameData.equipment.weapon) {
+            const weapon = gameData.equipment.weapon;
+            weapon.count = 1; // 添加数量属性
+            gameData.inventory.push(weapon);
+            gameData.equipment.weapon = null;
+            updateUI();
+            saveGame();
+            alert('斧头已卸下并放入背包！');
+        }
     }
 }
 
@@ -729,9 +740,15 @@ function equipArmor() {
 }
 
 function unequipArmor() {
-    gameData.equipment.armor = null;
-    updateUI();
-    saveGame();
+    if (gameData.equipment.armor) {
+        const armor = gameData.equipment.armor;
+        armor.count = 1; // 添加数量属性
+        gameData.inventory.push(armor);
+        gameData.equipment.armor = null;
+        updateUI();
+        saveGame();
+        alert('道袍已卸下并放入背包！');
+    }
 }
 
 function equipRing() {
@@ -746,9 +763,15 @@ function equipRing() {
 }
 
 function unequipRing() {
-    gameData.equipment.ring = null;
-    updateUI();
-    saveGame();
+    if (gameData.equipment.ring) {
+        const ring = gameData.equipment.ring;
+        ring.count = 1; // 添加数量属性
+        gameData.inventory.push(ring);
+        gameData.equipment.ring = null;
+        updateUI();
+        saveGame();
+        alert('戒指已卸下并放入背包！');
+    }
 }
 
 function equipAmulet() {
@@ -763,9 +786,40 @@ function equipAmulet() {
 }
 
 function unequipAmulet() {
-    gameData.equipment.amulet = null;
-    updateUI();
-    saveGame();
+    if (gameData.equipment.amulet) {
+        const amulet = gameData.equipment.amulet;
+        amulet.count = 1; // 添加数量属性
+        gameData.inventory.push(amulet);
+        gameData.equipment.amulet = null;
+        updateUI();
+        saveGame();
+        alert('护符已卸下并放入背包！');
+    }
+}
+
+// 装备背包中的装备
+function equipFromInventory(itemId) {
+    const itemIndex = gameData.inventory.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1) {
+        const item = gameData.inventory[itemIndex];
+        if (item.slot) {
+            // 卸下当前装备
+            if (gameData.equipment[item.slot]) {
+                const currentEquipment = gameData.equipment[item.slot];
+                currentEquipment.count = 1;
+                gameData.inventory.push(currentEquipment);
+            }
+            // 装备新装备
+            gameData.equipment[item.slot] = item;
+            // 从背包中移除
+            gameData.inventory.splice(itemIndex, 1);
+            updateUI();
+            saveGame();
+            alert(`成功装备了${item.name}！`);
+        } else {
+            alert('这不是装备，无法装备！');
+        }
+    }
 }
 
 // 招募道童
@@ -823,8 +877,8 @@ function openInventory() {
             ${gameData.inventory.length > 0 ? gameData.inventory.map(item => `
                 <tr>
                     <td>${item.name}</td>
-                    <td>${item.count}</td>
-                    <td><button>使用</button></td>
+                    <td>${item.count || 1}</td>
+                    <td>${item.slot ? `<button onclick="equipFromInventory(${item.id})">装备</button>` : '<button>使用</button>'}</td>
                 </tr>
             `).join('') : '<tr><td colspan="3">背包为空</td></tr>'}
         </table>
@@ -1071,19 +1125,20 @@ function openShop() {
     gameData.shop.items.forEach(item => {
         const qualityData = equipmentQuality[item.quality];
         const slotName = equipmentSlots[item.slot].name;
-        const mainStat = getStatName(Object.keys(item.stats)[0]);
-        const mainStatValue = Object.values(item.stats)[0];
+        const mainStatKey = Object.keys(item.stats || {})[0];
+        const mainStat = mainStatKey ? getStatName(mainStatKey) : '无';
+        const mainStatValue = Object.values(item.stats || {})[0] || 0;
         
         // 构建副属性文本
         let subStatsText = '';
-        for (const [stat, value] of Object.entries(item.subStats)) {
+        for (const [stat, value] of Object.entries(item.subStats || {})) {
             const statNames = {
                 woodBonus: '木材+',
                 stoneBonus: '灵石+',
                 expBonus: '修为+',
                 crit: '暴击率+'
             };
-            subStatsText += `${statNames[stat]}${(value * 100).toFixed(0)}% `;
+            subStatsText += `${statNames[stat]}${((value || 0) * 100).toFixed(0)}% `;
         }
         
         shopItemsHtml += `
