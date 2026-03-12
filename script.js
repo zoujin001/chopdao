@@ -433,6 +433,13 @@ function getStatName(stat) {
 function equipDrop(id) {
     if (window.tempEquipment) {
         const equipment = window.tempEquipment;
+        // 卸下当前装备并放入背包
+        if (gameData.equipment[equipment.slot]) {
+            const currentEquipment = gameData.equipment[equipment.slot];
+            currentEquipment.count = 1;
+            gameData.inventory.push(currentEquipment);
+        }
+        // 装备新装备
         gameData.equipment[equipment.slot] = equipment;
         updateUI();
         saveGame();
