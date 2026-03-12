@@ -168,6 +168,10 @@ function calculateDropChance() {
         chance += dropChance.critBonus;
     }
     
+    // 境界加成：每提升10级，掉落概率增加1%
+    const realmBonus = Math.floor(gameData.realm.level / 10) * 0.01;
+    chance += realmBonus;
+    
     // 聚宝盆buff加成
     if (gameData.buffs.includes('聚宝盆')) {
         chance *= dropChance.buffMultiplier;
@@ -316,7 +320,7 @@ function handleEquipmentDrop() {
 
 // 获取品质排名
 function getQualityRank(quality) {
-    const ranks = ['凡品', '灵品', '仙品', '神品', '圣品', '混沌'];
+    const ranks = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Chaos'];
     return ranks.indexOf(quality);
 }
 
@@ -1616,7 +1620,6 @@ function upgradeBuilding(building) {
         gameData.buildings[building]++;
         updateUI();
         saveGame();
-        alert('建筑升级成功！');
     } else {
         alert('资源不足！');
     }
@@ -1929,7 +1932,11 @@ function updateUI() {
     document.getElementById('lifespan').textContent = `${gameData.lifespan.current}/${gameData.lifespan.max}`;
     document.getElementById('realm').textContent = `${gameData.realm.stage}${gameData.realm.level}阶`;
     document.getElementById('exp').textContent = `${Math.floor(gameData.realm.exp)}/${Math.floor(gameData.realm.maxExp)}`;
+    document.getElementById('wood').textContent = gameData.resources.wood;
     document.getElementById('stone').textContent = gameData.resources.stone;
+    document.getElementById('strengthenStone').textContent = gameData.resources.strengthenStone;
+    document.getElementById('spiritWood').textContent = gameData.resources.spiritWood;
+    document.getElementById('divineWood').textContent = gameData.resources.divineWood;
     
     // 更新砍树区域
     const treeHealthPercent = (gameData.treeHealth / treeData.maxHealth) * 100;
