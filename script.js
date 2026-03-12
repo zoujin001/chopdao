@@ -3,7 +3,7 @@ let gameData = {
     // 基础属性
     realm: { stage: "凡人", level: 1, exp: 0, maxExp: 100 },
     lifespan: { current: 100, max: 100 },
-    resources: { wood: 0, stone: 0, totalWood: 0 },
+    resources: { wood: 0, stone: 0, totalWood: 0,强化石: 0,灵木: 0,神木: 0 },
     stats: { attack: 1, speed: 1, crit: 0.05, luck: 0 },
     
     // 装备系统
@@ -32,7 +32,8 @@ let gameData = {
     buildings: {
         woodField: 0,
         stoneMine: 0,
-        trainingRoom: 0
+        trainingRoom: 0,
+       炼器室: 0
     },
     lastOfflineTime: Date.now(), // 计算离线收益
     
@@ -54,7 +55,43 @@ let gameData = {
     // 游戏状态
     combo: 0,
     treeHealth: 100,
-    autoSave: true
+    autoSave: true,
+    
+    // 装备掉落系统
+    dropSystem: {
+        todayDrops: {
+            chop: 0,
+            boss: 0,
+            craft: 0,
+            shop: 0
+        },
+        totalDrops: {
+            chop: 0,
+            boss: 0,
+            craft: 0,
+            shop: 0
+        },
+        bestQuality: {
+            chop: "凡品",
+            boss: "凡品",
+            craft: "凡品",
+            shop: "凡品",
+            total: "凡品"
+        }
+    },
+    
+    // 商店系统
+    shop: {
+        items: [],
+        lastRefreshTime: Date.now(),
+        refreshCost: 100
+    },
+    
+    // 混沌装备
+    chaosEquipment: [],
+    
+    // 临时状态
+    buffs: []
 };
 
 // 树木数据
@@ -64,6 +101,33 @@ const treeData = {
     maxWood: 3,
     baseExp: 1,
     baseStoneChance: 0.1
+};
+
+// 装备品质数据
+const equipmentQuality = {
+    凡品: { color: '⚪', probability: 70, namePrefix: '' },
+    灵品: { color: '🟢', probability: 20, namePrefix: '灵' },
+    仙品: { color: '🔵', probability: 8, namePrefix: '仙' },
+    神品: { color: '🟣', probability: 1.9, namePrefix: '神' },
+    圣品: { color: '🟠', probability: 0.1, namePrefix: '圣' },
+    混沌: { color: '🔴', probability: 0, namePrefix: '混沌' }
+};
+
+// 装备部位数据
+const equipmentSlots = {
+    weapon: { name: '斧头', mainStat: 'atk', baseStat: 5 },
+    armor: { name: '道袍', mainStat: 'hp', baseStat: 10 },
+    ring: { name: '戒指', mainStat: 'speed', baseStat: 0.05 },
+    amulet: { name: '护符', mainStat: 'luck', baseStat: 1 }
+};
+
+// 装备掉落概率
+const dropChance = {
+    base: 0.05, // 5%基础概率
+    critBonus: 0.05, // 暴击时额外5%
+    comboBonus: 0.03, // 连击x10+额外3%
+    buffMultiplier: 2, // 聚宝盆双倍掉率
+    max: 0.5 // 上限50%
 };
 
 // 道童数据
@@ -84,8 +148,329 @@ function initGame() {
     updateUI();
     startAutoChopping();
     startAutoSave();
+    // 初始化商店
+    refreshShop();
     // 绑定键盘事件
     document.addEventListener('keydown', handleKeyPress);
+}
+
+// 计算装备掉落概率
+function calculateDropChance() {
+    let chance = dropChance.base;
+    
+    // 连击加成
+    if (gameData.combo >= 10) {
+        chance += dropChance.comboBonus;
+    }
+    
+    // 暴击加成（简化版，实际应根据暴击率计算）
+    if (Math.random() < gameData.stats.crit) {
+        chance += dropChance.critBonus;
+    }
+    
+    // 聚宝盆buff加成
+    if (gameData.buffs.includes('聚宝盆')) {
+        chance *= dropChance.buffMultiplier;
+    }
+    
+    // 上限
+    return Math.min(chance, dropChance.max);
+}
+
+// 生成装备品质
+function generateEquipmentQuality() {
+    const luck = gameData.stats.luck;
+    const realmLevel = getRealmLevel();
+    const realmBonus = realmLevel * 0.01; // 每境界+1%
+    
+    // 计算各品质概率
+    const weights = {
+        凡品: Math.max(10, 70 - luck * 0.5),
+        灵品: 20 + luck * 0.3,
+        仙品: 8 + luck * 0.15 + realmBonus * 10,
+        神品: 1.9 + luck * 0.05 + realmBonus * 5,
+        圣品: 0.1 + luck * 0.01 + realmBonus * 2,
+        混沌: realmLevel >= 5 ? 0.01 + realmBonus * 0.5 : 0
+    };
+    
+    // 加权随机
+    const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+    let random = Math.random() * totalWeight;
+    
+    for (const [quality, weight] of Object.entries(weights)) {
+        random -= weight;
+        if (random <= 0) {
+            return quality;
+        }
+    }
+    
+    return '凡品'; // 默认返回凡品
+}
+
+// 获取境界等级
+function getRealmLevel() {
+    const stageMap = {
+        '凡人': 0,
+        '炼气': 1,
+        '筑基': 2,
+        '金丹': 3,
+        '元婴': 4,
+        '化神': 5
+    };
+    return stageMap[gameData.realm.stage] || 0;
+}
+
+// 生成装备
+function generateEquipment(quality, slot = null) {
+    const slots = Object.keys(equipmentSlots);
+    const targetSlot = slot || slots[Math.floor(Math.random() * slots.length)];
+    const slotData = equipmentSlots[targetSlot];
+    
+    // 计算主属性
+    let qualityMultiplier = 1;
+    switch(quality) {
+        case '灵品': qualityMultiplier = 1.5; break;
+        case '仙品': qualityMultiplier = 2.5; break;
+        case '神品': qualityMultiplier = 4; break;
+        case '圣品': qualityMultiplier = 6; break;
+        case '混沌': qualityMultiplier = 10; break;
+    }
+    
+    const mainStatValue = Math.floor(slotData.baseStat * qualityMultiplier);
+    
+    // 生成装备名称
+    const namePrefix = equipmentQuality[quality].namePrefix;
+    const nameSuffixes = {
+        weapon: ['开山斧', '砍柴斧', '伐木斧', '精铁斧', '神斧'],
+        armor: ['道袍', '仙袍', '神袍', '圣袍', '混沌袍'],
+        ring: ['戒指', '仙戒', '神戒', '圣戒', '混沌戒'],
+        amulet: ['护符', '仙符', '神符', '圣符', '混沌符']
+    };
+    const suffix = nameSuffixes[targetSlot][Math.floor(Math.random() * nameSuffixes[targetSlot].length)];
+    const name = namePrefix + suffix;
+    
+    // 生成装备
+    return {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        slot: targetSlot,
+        quality: quality,
+        level: 1,
+        name: name,
+        stats: {
+            [slotData.mainStat]: mainStatValue
+        },
+        subStats: generateSubStats(quality)
+    };
+}
+
+// 生成装备副属性
+function generateSubStats(quality) {
+    const subStats = {};
+    const possibleStats = ['woodBonus', 'stoneBonus', 'expBonus', 'crit'];
+    const statCount = Math.min(Math.floor(Math.random() * 3) + 1, possibleStats.length);
+    
+    // 根据品质决定副属性值
+    let valueMultiplier = 1;
+    switch(quality) {
+        case '灵品': valueMultiplier = 0.05; break;
+        case '仙品': valueMultiplier = 0.1; break;
+        case '神品': valueMultiplier = 0.15; break;
+        case '圣品': valueMultiplier = 0.25; break;
+        case '混沌': valueMultiplier = 0.5; break;
+        default: valueMultiplier = 0.02;
+    }
+    
+    // 随机选择副属性
+    const shuffledStats = possibleStats.sort(() => 0.5 - Math.random());
+    for (let i = 0; i < statCount; i++) {
+        const stat = shuffledStats[i];
+        subStats[stat] = valueMultiplier;
+    }
+    
+    return subStats;
+}
+
+// 处理装备掉落
+function handleEquipmentDrop() {
+    const chance = calculateDropChance();
+    if (Math.random() < chance) {
+        const quality = generateEquipmentQuality();
+        const equipment = generateEquipment(quality);
+        showEquipmentDrop(equipment);
+        
+        // 更新掉落统计
+        gameData.dropSystem.todayDrops.chop++;
+        gameData.dropSystem.totalDrops.chop++;
+        
+        // 更新最佳品质
+        if (getQualityRank(equipment.quality) > getQualityRank(gameData.dropSystem.bestQuality.chop)) {
+            gameData.dropSystem.bestQuality.chop = equipment.quality;
+        }
+        if (getQualityRank(equipment.quality) > getQualityRank(gameData.dropSystem.bestQuality.total)) {
+            gameData.dropSystem.bestQuality.total = equipment.quality;
+        }
+        
+        saveGame();
+    }
+}
+
+// 获取品质排名
+function getQualityRank(quality) {
+    const ranks = ['凡品', '灵品', '仙品', '神品', '圣品', '混沌'];
+    return ranks.indexOf(quality);
+}
+
+// 显示装备掉落提示
+function showEquipmentDrop(equipment) {
+    const popupBody = document.getElementById('popup-body');
+    const qualityData = equipmentQuality[equipment.quality];
+    
+    // 构建副属性文本
+    let subStatsText = '';
+    for (const [stat, value] of Object.entries(equipment.subStats)) {
+        const statNames = {
+            woodBonus: '木材+',
+            stoneBonus: '灵石+',
+            expBonus: '修为+',
+            crit: '暴击率+'
+        };
+        subStatsText += `${statNames[stat]}${(value * 100).toFixed(0)}% `;
+    }
+    
+    popupBody.innerHTML = `
+        <h3>🎉 获得装备！</h3>
+        <table>
+            <tr>
+                <td>品质:</td>
+                <td>${qualityData.color} ${equipment.quality}</td>
+            </tr>
+            <tr>
+                <td>名称:</td>
+                <td>${equipment.name}</td>
+            </tr>
+            <tr>
+                <td>部位:</td>
+                <td>${equipmentSlots[equipment.slot].name}</td>
+            </tr>
+            <tr>
+                <td>主属性:</td>
+                <td>${getStatName(Object.keys(equipment.stats)[0])}+${Object.values(equipment.stats)[0]}</td>
+            </tr>
+            ${subStatsText ? `<tr>
+                <td>副属性:</td>
+                <td>${subStatsText}</td>
+            </tr>` : ''}
+        </table>
+        <div style="margin-top: 10px; display: flex; gap: 10px;">
+            <button onclick="equipDrop(${equipment.id}); closePopup();">装备</button>
+            <button onclick="addToInventory(${equipment.id}); closePopup();">放入背包</button>
+            <button onclick="sellDrop(${equipment.id}); closePopup();">出售</button>
+        </div>
+    `;
+    
+    // 保存装备到临时变量，以便处理
+    window.tempEquipment = equipment;
+    document.getElementById('popup').style.display = 'block';
+}
+
+// 获取属性名称
+function getStatName(stat) {
+    const statNames = {
+        atk: '攻击',
+        hp: '生命',
+        speed: '攻速',
+        luck: '幸运'
+    };
+    return statNames[stat] || stat;
+}
+
+// 装备掉落的装备
+function equipDrop(id) {
+    if (window.tempEquipment) {
+        const equipment = window.tempEquipment;
+        gameData.equipment[equipment.slot] = equipment;
+        updateUI();
+        saveGame();
+        alert(`成功装备了${equipment.name}！`);
+    }
+}
+
+// 将掉落的装备放入背包
+function addToInventory(id) {
+    if (window.tempEquipment) {
+        const equipment = window.tempEquipment;
+        gameData.inventory.push(equipment);
+        updateUI();
+        saveGame();
+        alert(`成功将${equipment.name}放入背包！`);
+    }
+}
+
+// 出售掉落的装备
+function sellDrop(id) {
+    if (window.tempEquipment) {
+        const equipment = window.tempEquipment;
+        const sellPrice = calculateSellPrice(equipment);
+        gameData.resources.stone += sellPrice;
+        updateUI();
+        saveGame();
+        alert(`成功出售${equipment.name}，获得${sellPrice}灵石！`);
+    }
+}
+
+// 计算装备出售价格
+function calculateSellPrice(equipment) {
+    const basePrice = 50;
+    const qualityMultiplier = {
+        '凡品': 1,
+        '灵品': 4,
+        '仙品': 20,
+        '神品': 100,
+        '圣品': 500,
+        '混沌': 2500
+    };
+    return Math.floor(basePrice * qualityMultiplier[equipment.quality]);
+}
+
+// 刷新商店
+function refreshShop() {
+    gameData.shop.items = [];
+    const realmLevel = getRealmLevel();
+    
+    // 生成6件装备
+    for (let i = 0; i < 6; i++) {
+        // 根据境界决定品质范围
+        let maxQualityIndex = Math.min(realmLevel + 2, 4); // 最高仙品
+        const qualityRanks = ['凡品', '灵品', '仙品', '神品', '圣品'];
+        const quality = qualityRanks[Math.floor(Math.random() * (maxQualityIndex + 1))];
+        const equipment = generateEquipment(quality);
+        
+        // 计算价格
+        const basePrice = 50;
+        const priceMultiplier = {
+            '凡品': 1,
+            '灵品': 4,
+            '仙品': 20
+        };
+        const price = Math.floor(basePrice * (priceMultiplier[quality] || 100));
+        
+        gameData.shop.items.push({ ...equipment, price });
+    }
+    
+    gameData.shop.lastRefreshTime = Date.now();
+    saveGame();
+}
+
+// 手动刷新商店
+function manualRefreshShop() {
+    if (gameData.resources.stone >= gameData.shop.refreshCost) {
+        gameData.resources.stone -= gameData.shop.refreshCost;
+        refreshShop();
+        updateUI();
+        alert('商店已刷新！');
+    } else {
+        alert('灵石不足！');
+    }
 }
 
 // 保存游戏到LocalStorage
@@ -223,6 +608,9 @@ function chopTree() {
             if (stoneGain > 0) {
                 showFloatingText(`+${stoneGain}灵石`);
             }
+            
+            // 处理装备掉落
+            handleEquipmentDrop();
             
             // 重置树木和连击
             gameData.treeHealth = treeData.maxHealth;
@@ -468,11 +856,67 @@ function openSkills() {
     document.getElementById('popup').style.display = 'block';
 }
 
+// BOSS数据
+const bossData = {
+    treeDemon: {
+        name: '树妖',
+        unlockRealm: '炼气期',
+        unlockLevel: 10,
+        hp: 1000,
+        timeLimit: 60,
+        guaranteedQuality: '灵品',
+        possibleQuality: ['仙品', '神品'],
+        possibleDropChance: { '仙品': 0.3, '神品': 0.05 },
+        specialDrop: null,
+        reward: { stone: 100 }
+    },
+    woodSpirit: {
+        name: '木灵精',
+        unlockRealm: '筑基期',
+        unlockLevel: 20,
+        hp: 5000,
+        timeLimit: 60,
+        guaranteedQuality: '仙品',
+        possibleQuality: ['神品', '圣品'],
+        possibleDropChance: { '神品': 0.3, '圣品': 0.05 },
+        specialDrop: '灵宠蛋',
+        reward: { stone: 200 }
+    },
+    forestLord: {
+        name: '森林霸主',
+        unlockRealm: '金丹期',
+        unlockLevel: 30,
+        hp: 20000,
+        timeLimit: 90,
+        guaranteedQuality: '神品',
+        possibleQuality: ['圣品', '混沌'],
+        possibleDropChance: { '圣品': 0.2, '混沌': 0.01 },
+        specialDrop: '突破丹×3',
+        reward: { stone: 500 }
+    }
+};
+
 // 打开挑战
 function openChallenges() {
     const popupBody = document.getElementById('popup-body');
+    let challengesHtml = '';
+    
+    Object.values(bossData).forEach(boss => {
+        const canChallenge = gameData.realm.level >= boss.unlockLevel;
+        challengesHtml += `
+            <tr>
+                <td>${boss.name}</td>
+                <td>${boss.unlockRealm}</td>
+                <td>${boss.hp}</td>
+                <td>${boss.timeLimit}秒</td>
+                <td>${equipmentQuality[boss.guaranteedQuality].color} ${boss.guaranteedQuality} ${boss.specialDrop ? ' ' + boss.specialDrop : ''}</td>
+                <td><button ${!canChallenge ? 'disabled' : ''} onclick="challengeBoss('${boss.name}')">挑战</button></td>
+            </tr>
+        `;
+    });
+    
     popupBody.innerHTML = `
-        <h3>挑战系统</h3>
+        <h3>⚔️ 挑战系统</h3>
         <table>
             <tr>
                 <th>妖兽</th>
@@ -482,32 +926,101 @@ function openChallenges() {
                 <th>掉落</th>
                 <th>操作</th>
             </tr>
-            <tr>
-                <td>树妖</td>
-                <td>炼气期</td>
-                <td>1000</td>
-                <td>60秒</td>
-                <td>绿装 灵石×100</td>
-                <td><button ${gameData.realm.level < 10 ? 'disabled' : ''}>挑战</button></td>
-            </tr>
-            <tr>
-                <td>木灵精</td>
-                <td>筑基期</td>
-                <td>5000</td>
-                <td>60秒</td>
-                <td>蓝装 灵宠蛋</td>
-                <td><button ${gameData.realm.level < 20 ? 'disabled' : ''}>挑战</button></td>
-            </tr>
-            <tr>
-                <td>森林霸主</td>
-                <td>金丹期</td>
-                <td>20000</td>
-                <td>90秒</td>
-                <td>紫装 突破丹×3</td>
-                <td><button ${gameData.realm.level < 30 ? 'disabled' : ''}>挑战</button></td>
-            </tr>
+            ${challengesHtml}
         </table>
     `;
+    document.getElementById('popup').style.display = 'block';
+}
+
+// 挑战BOSS
+function challengeBoss(bossName) {
+    // 简化版BOSS挑战，直接胜利
+    const bossKey = Object.keys(bossData).find(key => bossData[key].name === bossName);
+    if (bossKey) {
+        const boss = bossData[bossKey];
+        
+        // 获得保底装备
+        const guaranteedEquipment = generateEquipment(boss.guaranteedQuality);
+        
+        // 尝试获得额外装备
+        let extraEquipment = [];
+        for (const [quality, chance] of Object.entries(boss.possibleDropChance)) {
+            if (Math.random() < chance) {
+                extraEquipment.push(generateEquipment(quality));
+            }
+        }
+        
+        // 显示掉落
+        showBossDrop(boss, guaranteedEquipment, extraEquipment);
+        
+        // 获得奖励
+        gameData.resources.stone += boss.reward.stone;
+        
+        // 更新掉落统计
+        gameData.dropSystem.todayDrops.boss++;
+        gameData.dropSystem.totalDrops.boss++;
+        
+        // 更新最佳品质
+        const bestQuality = [...[guaranteedEquipment], ...extraEquipment]
+            .reduce((best, eq) => getQualityRank(eq.quality) > getQualityRank(best) ? eq.quality : best, '凡品');
+        
+        if (getQualityRank(bestQuality) > getQualityRank(gameData.dropSystem.bestQuality.boss)) {
+            gameData.dropSystem.bestQuality.boss = bestQuality;
+        }
+        if (getQualityRank(bestQuality) > getQualityRank(gameData.dropSystem.bestQuality.total)) {
+            gameData.dropSystem.bestQuality.total = bestQuality;
+        }
+        
+        saveGame();
+    }
+}
+
+// 显示BOSS掉落
+function showBossDrop(boss, guaranteedEquipment, extraEquipment) {
+    const popupBody = document.getElementById('popup-body');
+    
+    // 构建装备列表HTML
+    let equipmentHtml = `
+        <tr>
+            <td>保底掉落:</td>
+            <td>${equipmentQuality[guaranteedEquipment.quality].color} ${guaranteedEquipment.name}</td>
+        </tr>
+    `;
+    
+    extraEquipment.forEach((eq, index) => {
+        equipmentHtml += `
+            <tr>
+                <td>额外掉落 ${index + 1}:</td>
+                <td>${equipmentQuality[eq.quality].color} ${eq.name}</td>
+            </tr>
+        `;
+    });
+    
+    if (boss.specialDrop) {
+        equipmentHtml += `
+            <tr>
+                <td>特殊掉落:</td>
+                <td>${boss.specialDrop}</td>
+            </tr>
+        `;
+    }
+    
+    equipmentHtml += `
+        <tr>
+            <td>灵石奖励:</td>
+            <td>💎 ${boss.reward.stone}灵石</td>
+        </tr>
+    `;
+    
+    popupBody.innerHTML = `
+        <h3>🎉 挑战成功！</h3>
+        <h4>击败了${boss.name}</h4>
+        <table>
+            ${equipmentHtml}
+        </table>
+        <button onclick="closePopup()">确定</button>
+    `;
+    
     document.getElementById('popup').style.display = 'block';
 }
 
@@ -550,8 +1063,53 @@ function openMap() {
 // 打开商店
 function openShop() {
     const popupBody = document.getElementById('popup-body');
+    const realmLevel = getRealmLevel();
+    const nextRefreshTime = new Date(gameData.shop.lastRefreshTime + 2 * 60 * 60 * 1000).toLocaleTimeString();
+    
+    // 构建商店物品HTML
+    let shopItemsHtml = '';
+    gameData.shop.items.forEach(item => {
+        const qualityData = equipmentQuality[item.quality];
+        const slotName = equipmentSlots[item.slot].name;
+        const mainStat = getStatName(Object.keys(item.stats)[0]);
+        const mainStatValue = Object.values(item.stats)[0];
+        
+        // 构建副属性文本
+        let subStatsText = '';
+        for (const [stat, value] of Object.entries(item.subStats)) {
+            const statNames = {
+                woodBonus: '木材+',
+                stoneBonus: '灵石+',
+                expBonus: '修为+',
+                crit: '暴击率+'
+            };
+            subStatsText += `${statNames[stat]}${(value * 100).toFixed(0)}% `;
+        }
+        
+        shopItemsHtml += `
+            <tr>
+                <td>${qualityData.color} ${item.name}</td>
+                <td>${slotName}<br>${mainStat}+${mainStatValue}<br>${subStatsText}</td>
+                <td>💎 ${item.price}灵石</td>
+                <td><button onclick="buyShopItem(${item.id})">购买</button></td>
+            </tr>
+        `;
+    });
+    
     popupBody.innerHTML = `
         <h3>🛒 商店</h3>
+        <p>下次自动刷新: ${nextRefreshTime}</p>
+        <button onclick="manualRefreshShop()" style="margin-bottom: 10px;">手动刷新 (${gameData.shop.refreshCost}灵石)</button>
+        <table>
+            <tr>
+                <th>装备</th>
+                <th>属性</th>
+                <th>价格</th>
+                <th>操作</th>
+            </tr>
+            ${shopItemsHtml}
+        </table>
+        <h4 style="margin-top: 20px;">消耗品</h4>
         <table>
             <tr>
                 <th>道具</th>
@@ -583,27 +1141,36 @@ function openShop() {
                 <td>💎 200灵石</td>
                 <td><button onclick="buyItem('灵宠经验丹', 200, 10)">购买×10</button></td>
             </tr>
-            <tr>
-                <td>🧥 新手道袍</td>
-                <td>❤️ 生命+10 🪵 木材+5%</td>
-                <td>💎 500灵石</td>
-                <td><button onclick="buyEquipment('armor', {id: 2, name: '新手道袍', quality: '凡品', level: 1, stats: {hp: 10, woodBonus: 0.05}})">购买</button></td>
-            </tr>
-            <tr>
-                <td>💍 青铜戒指</td>
-                <td>⚡ 攻速+5% 💎 灵石+5%</td>
-                <td>💎 800灵石</td>
-                <td><button onclick="buyEquipment('ring', {id: 3, name: '青铜戒指', quality: '凡品', level: 1, stats: {speed: 0.05, stoneBonus: 0.05}})">购买</button></td>
-            </tr>
-            <tr>
-                <td>🔮 普通护符</td>
-                <td>🍀 幸运+1 ⭐ 修为+5%</td>
-                <td>💎 1000灵石</td>
-                <td><button onclick="buyEquipment('amulet', {id: 4, name: '普通护符', quality: '凡品', level: 1, stats: {luck: 1, expBonus: 0.05}})">购买</button></td>
-            </tr>
         </table>
     `;
     document.getElementById('popup').style.display = 'block';
+}
+
+// 购买商店物品
+function buyShopItem(id) {
+    const item = gameData.shop.items.find(item => item.id === id);
+    if (item) {
+        if (gameData.resources.stone >= item.price) {
+            gameData.resources.stone -= item.price;
+            showEquipmentDrop(item);
+            
+            // 更新掉落统计
+            gameData.dropSystem.todayDrops.shop++;
+            gameData.dropSystem.totalDrops.shop++;
+            
+            // 更新最佳品质
+            if (getQualityRank(item.quality) > getQualityRank(gameData.dropSystem.bestQuality.shop)) {
+                gameData.dropSystem.bestQuality.shop = item.quality;
+            }
+            if (getQualityRank(item.quality) > getQualityRank(gameData.dropSystem.bestQuality.total)) {
+                gameData.dropSystem.bestQuality.total = item.quality;
+            }
+            
+            saveGame();
+        } else {
+            alert('灵石不足！');
+        }
+    }
 }
 
 // 购买物品
@@ -651,11 +1218,273 @@ function buyEquipment(slot, equipment) {
     }
 }
 
+// 洞府炼器系统
+const craftingRecipes = {
+    '凡品': {
+        wood: 100,
+        level: 1,
+        successRate: 1.0
+    },
+    '灵品': {
+        wood: 500,
+        stone: 50,
+        level: 3,
+        successRate: 0.9
+    },
+    '仙品': {
+        wood: 2000,
+        stone: 300,
+        强化石: 10,
+        level: 5,
+        successRate: 0.8
+    },
+    '神品': {
+        wood: 10000,
+        stone: 2000,
+        强化石: 50,
+        灵木: 10,
+        level: 8,
+        successRate: 0.6
+    },
+    '圣品': {
+        wood: 50000,
+        stone: 10000,
+        强化石: 200,
+        神木: 5,
+        level: 10,
+        successRate: 0.4
+    }
+};
+
+// 打开洞府
+function openMap() {
+    const popupBody = document.getElementById('popup-body');
+    popupBody.innerHTML = `
+        <h3>🗺️ 地图</h3>
+        <p>当前区域: 新手森林</p>
+        <table>
+            <tr>
+                <th>区域</th>
+                <th>解锁条件</th>
+                <th>描述</th>
+                <th>操作</th>
+            </tr>
+            <tr>
+                <td>新手森林</td>
+                <td>凡人一阶</td>
+                <td>基础木材资源</td>
+                <td><button>进入</button></td>
+            </tr>
+            <tr>
+                <td>青木林</td>
+                <td>炼气期</td>
+                <td>高级木材资源</td>
+                <td><button ${gameData.realm.level < 10 ? 'disabled' : ''}>进入</button></td>
+            </tr>
+            <tr>
+                <td>灵木谷</td>
+                <td>筑基期</td>
+                <td>稀有木材资源</td>
+                <td><button ${gameData.realm.level < 20 ? 'disabled' : ''}>进入</button></td>
+            </tr>
+        </table>
+        <h4 style="margin-top: 20px;">洞府建筑</h4>
+        <table>
+            <tr>
+                <th>建筑</th>
+                <th>等级</th>
+                <th>效果</th>
+                <th>升级需求</th>
+                <th>操作</th>
+            </tr>
+            <tr>
+                <td>灵木园</td>
+                <td>${gameData.buildings.woodField}</td>
+                <td>木材+${gameData.buildings.woodField * 0.1}/小时</td>
+                <td>木材×1000</td>
+                <td><button onclick="upgradeBuilding('woodField')">升级</button></td>
+            </tr>
+            <tr>
+                <td>灵矿</td>
+                <td>${gameData.buildings.stoneMine}</td>
+                <td>灵石+${gameData.buildings.stoneMine * 0.1}/小时</td>
+                <td>木材×500 灵石×100</td>
+                <td><button onclick="upgradeBuilding('stoneMine')">升级</button></td>
+            </tr>
+            <tr>
+                <td>修炼室</td>
+                <td>${gameData.buildings.trainingRoom}</td>
+                <td>离线修为+${gameData.buildings.trainingRoom * 0.1}/小时</td>
+                <td>灵石×1000</td>
+                <td><button onclick="upgradeBuilding('trainingRoom')">升级</button></td>
+            </tr>
+            <tr>
+                <td>炼器室</td>
+                <td>${gameData.buildings.炼器室}</td>
+                <td>可打造${gameData.buildings.炼器室 >= 1 ? '凡品' : '无'}装备</td>
+                <td>木材×2000 灵石×500</td>
+                <td><button onclick="upgradeBuilding('炼器室')">${gameData.buildings.炼器室 >= 1 ? '升级' : '建造'}</button></td>
+            </tr>
+        </table>
+        ${gameData.buildings.炼器室 >= 1 ? `
+        <h4 style="margin-top: 20px;">炼器</h4>
+        <button onclick="openCrafting()">打开炼器界面</button>
+        ` : ''}
+    `;
+    document.getElementById('popup').style.display = 'block';
+}
+
+// 升级建筑
+function upgradeBuilding(building) {
+    let cost = {};
+    switch(building) {
+        case 'woodField':
+            cost = { wood: 1000 };
+            break;
+        case 'stoneMine':
+            cost = { wood: 500, stone: 100 };
+            break;
+        case 'trainingRoom':
+            cost = { stone: 1000 };
+            break;
+        case '炼器室':
+            cost = { wood: 2000, stone: 500 };
+            break;
+    }
+    
+    // 检查资源是否足够
+    let canAfford = true;
+    for (const [resource, amount] of Object.entries(cost)) {
+        if (gameData.resources[resource] < amount) {
+            canAfford = false;
+            break;
+        }
+    }
+    
+    if (canAfford) {
+        // 扣除资源
+        for (const [resource, amount] of Object.entries(cost)) {
+            gameData.resources[resource] -= amount;
+        }
+        
+        // 升级建筑
+        gameData.buildings[building]++;
+        updateUI();
+        saveGame();
+        alert('建筑升级成功！');
+    } else {
+        alert('资源不足！');
+    }
+}
+
+// 打开炼器界面
+function openCrafting() {
+    const popupBody = document.getElementById('popup-body');
+    let craftingHtml = '';
+    
+    Object.entries(craftingRecipes).forEach(([quality, recipe]) => {
+        if (gameData.buildings.炼器室 >= recipe.level) {
+            // 检查资源是否足够
+            let canCraft = true;
+            let costText = '';
+            for (const [resource, amount] of Object.entries(recipe)) {
+                if (typeof amount === 'number' && resource !== 'level' && resource !== 'successRate') {
+                    costText += `${resource}×${amount} `;
+                    if (gameData.resources[resource] < amount) {
+                        canCraft = false;
+                    }
+                }
+            }
+            
+            craftingHtml += `
+                <tr>
+                    <td>${equipmentQuality[quality].color} ${quality}</td>
+                    <td>${costText}</td>
+                    <td>${(recipe.successRate * 100).toFixed(0)}%</td>
+                    <td><button ${!canCraft ? 'disabled' : ''} onclick="craftEquipment('${quality}')">打造</button></td>
+                </tr>
+            `;
+        }
+    });
+    
+    popupBody.innerHTML = `
+        <h3>🔨 炼器室</h3>
+        <p>炼器室等级: ${gameData.buildings.炼器室}</p>
+        <table>
+            <tr>
+                <th>品质</th>
+                <th>材料需求</th>
+                <th>成功率</th>
+                <th>操作</th>
+            </tr>
+            ${craftingHtml}
+        </table>
+    `;
+    document.getElementById('popup').style.display = 'block';
+}
+
+// 打造装备
+function craftEquipment(quality) {
+    const recipe = craftingRecipes[quality];
+    if (recipe && gameData.buildings.炼器室 >= recipe.level) {
+        // 检查资源是否足够
+        let canCraft = true;
+        for (const [resource, amount] of Object.entries(recipe)) {
+            if (typeof amount === 'number' && resource !== 'level' && resource !== 'successRate') {
+                if (gameData.resources[resource] < amount) {
+                    canCraft = false;
+                    break;
+                }
+            }
+        }
+        
+        if (canCraft) {
+            // 扣除资源
+            for (const [resource, amount] of Object.entries(recipe)) {
+                if (typeof amount === 'number' && resource !== 'level' && resource !== 'successRate') {
+                    gameData.resources[resource] -= amount;
+                }
+            }
+            
+            // 计算成功率
+            if (Math.random() < recipe.successRate) {
+                // 成功
+                const equipment = generateEquipment(quality);
+                showEquipmentDrop(equipment);
+                
+                // 更新掉落统计
+                gameData.dropSystem.todayDrops.craft++;
+                gameData.dropSystem.totalDrops.craft++;
+                
+                // 更新最佳品质
+                if (getQualityRank(equipment.quality) > getQualityRank(gameData.dropSystem.bestQuality.craft)) {
+                    gameData.dropSystem.bestQuality.craft = equipment.quality;
+                }
+                if (getQualityRank(equipment.quality) > getQualityRank(gameData.dropSystem.bestQuality.total)) {
+                    gameData.dropSystem.bestQuality.total = equipment.quality;
+                }
+            } else {
+                // 失败，返还50%材料
+                for (const [resource, amount] of Object.entries(recipe)) {
+                    if (typeof amount === 'number' && resource !== 'level' && resource !== 'successRate') {
+                        gameData.resources[resource] += Math.floor(amount * 0.5);
+                    }
+                }
+                alert('炼器失败！返还50%材料。');
+            }
+            
+            saveGame();
+        } else {
+            alert('材料不足！');
+        }
+    }
+}
+
 // 打开设置
 function openSettings() {
     const popupBody = document.getElementById('popup-body');
     popupBody.innerHTML = `
-        <h3>设置</h3>
+        <h3>⚙️ 设置</h3>
         <table>
             <tr>
                 <th>功能</th>
@@ -686,6 +1515,45 @@ function openSettings() {
                 <td>重置游戏</td>
                 <td>清空所有数据</td>
                 <td><button onclick="resetGame()">重置</button></td>
+            </tr>
+        </table>
+        <h4 style="margin-top: 20px;">装备获取统计</h4>
+        <table>
+            <tr>
+                <th>获取途径</th>
+                <th>今日次数</th>
+                <th>累计次数</th>
+                <th>最佳品质</th>
+            </tr>
+            <tr>
+                <td>砍树掉落</td>
+                <td>${gameData.dropSystem.todayDrops.chop}</td>
+                <td>${gameData.dropSystem.totalDrops.chop}</td>
+                <td>${equipmentQuality[gameData.dropSystem.bestQuality.chop].color} ${gameData.dropSystem.bestQuality.chop}</td>
+            </tr>
+            <tr>
+                <td>BOSS挑战</td>
+                <td>${gameData.dropSystem.todayDrops.boss}</td>
+                <td>${gameData.dropSystem.totalDrops.boss}</td>
+                <td>${equipmentQuality[gameData.dropSystem.bestQuality.boss].color} ${gameData.dropSystem.bestQuality.boss}</td>
+            </tr>
+            <tr>
+                <td>洞府炼器</td>
+                <td>${gameData.dropSystem.todayDrops.craft}</td>
+                <td>${gameData.dropSystem.totalDrops.craft}</td>
+                <td>${equipmentQuality[gameData.dropSystem.bestQuality.craft].color} ${gameData.dropSystem.bestQuality.craft}</td>
+            </tr>
+            <tr>
+                <td>商店购买</td>
+                <td>${gameData.dropSystem.todayDrops.shop}</td>
+                <td>${gameData.dropSystem.totalDrops.shop}</td>
+                <td>${equipmentQuality[gameData.dropSystem.bestQuality.shop].color} ${gameData.dropSystem.bestQuality.shop}</td>
+            </tr>
+            <tr>
+                <td>总计</td>
+                <td>${gameData.dropSystem.todayDrops.chop + gameData.dropSystem.todayDrops.boss + gameData.dropSystem.todayDrops.craft + gameData.dropSystem.todayDrops.shop}</td>
+                <td>${gameData.dropSystem.totalDrops.chop + gameData.dropSystem.totalDrops.boss + gameData.dropSystem.totalDrops.craft + gameData.dropSystem.totalDrops.shop}</td>
+                <td>${equipmentQuality[gameData.dropSystem.bestQuality.total].color} ${gameData.dropSystem.bestQuality.total}</td>
             </tr>
         </table>
     `;
