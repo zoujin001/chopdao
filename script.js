@@ -320,26 +320,63 @@ function getQualityRank(quality) {
     return ranks.indexOf(quality);
 }
 
+// 计算装备属性差异
+function calculateEquipmentDiff(newEquipment) {
+    const currentEquipment = gameData.equipment[newEquipment.slot];
+    const diff = {};
+    
+    // 比较主属性
+    if (newEquipment.stats) {
+        for (const [stat, value] of Object.entries(newEquipment.stats)) {
+            const currentValue = currentEquipment ? (currentEquipment.stats ? currentEquipment.stats[stat] || 0 : 0) : 0;
+            diff[stat] = (value || 0) - currentValue;
+        }
+    }
+    
+    // 比较副属性
+    if (newEquipment.subStats) {
+        for (const [stat, value] of Object.entries(newEquipment.subStats)) {
+            const currentValue = currentEquipment ? (currentEquipment.subStats ? currentEquipment.subStats[stat] || 0 : 0) : 0;
+            diff[stat] = (value || 0) - currentValue;
+        }
+    }
+    
+    return diff;
+}
+
 // 显示装备掉落提示
 function showEquipmentDrop(equipment) {
     const popupBody = document.getElementById('popup-body');
     const qualityData = equipmentQuality[equipment.quality];
     
-    // 构建副属性文本
-    let subStatsText = '';
-    for (const [stat, value] of Object.entries(equipment.subStats || {})) {
-        const statNames = {
-            woodBonus: '木材+',
-            stoneBonus: '灵石+',
-            expBonus: '修为+',
-            crit: '暴击率+'
-        };
-        subStatsText += `${statNames[stat]}${((value || 0) * 100).toFixed(0)}% `;
+    // 计算属性差异
+    const diff = calculateEquipmentDiff(equipment);
+    
+    // 构建主属性文本
+    let mainStatsText = '';
+    if (equipment.stats) {
+        for (const [stat, value] of Object.entries(equipment.stats)) {
+            const diffValue = diff[stat] || 0;
+            const diffText = diffValue > 0 ? `<span style="color: green;">+${diffValue}</span>` : diffValue < 0 ? `<span style="color: red;">${diffValue}</span>` : '';
+            mainStatsText += `${getStatName(stat)}+${value} ${diffText}<br>`;
+        }
     }
     
-    // 处理主属性显示
-    const mainStatKey = Object.keys(equipment.stats || {})[0];
-    const mainStatValue = Object.values(equipment.stats || {})[0] || 0;
+    // 构建副属性文本
+    let subStatsText = '';
+    if (equipment.subStats) {
+        for (const [stat, value] of Object.entries(equipment.subStats)) {
+            const statNames = {
+                woodBonus: '木材+',
+                stoneBonus: '灵石+',
+                expBonus: '修为+',
+                crit: '暴击率+'
+            };
+            const diffValue = diff[stat] || 0;
+            const diffText = diffValue > 0 ? `<span style="color: green;">+${(diffValue * 100).toFixed(0)}%</span>` : diffValue < 0 ? `<span style="color: red;">${(diffValue * 100).toFixed(0)}%</span>` : '';
+            subStatsText += `${statNames[stat]}${((value || 0) * 100).toFixed(0)}% ${diffText}<br>`;
+        }
+    }
     
     popupBody.innerHTML = `
         <h3>🎉 获得装备！</h3>
@@ -356,13 +393,17 @@ function showEquipmentDrop(equipment) {
                 <td>部位:</td>
                 <td>${equipmentSlots[equipment.slot].name}</td>
             </tr>
-            ${mainStatKey ? `<tr>
+            ${mainStatsText ? `<tr>
                 <td>主属性:</td>
-                <td>${getStatName(mainStatKey)}+${mainStatValue}</td>
+                <td>${mainStatsText}</td>
             </tr>` : ''}
             ${subStatsText ? `<tr>
                 <td>副属性:</td>
                 <td>${subStatsText}</td>
+            </tr>` : ''}
+            ${Object.keys(diff).length > 0 ? `<tr>
+                <td>属性差异:</td>
+                <td><span style="color: green;">绿色</span>表示增加，<span style="color: red;">红色</span>表示减少</td>
             </tr>` : ''}
         </table>
         <div style="margin-top: 10px; display: flex; gap: 10px;">
@@ -863,6 +904,80 @@ function openRealmPopup() {
     document.getElementById('popup').style.display = 'block';
 }
 
+// 显示装备属性比较
+function showEquipmentCompare(itemId) {
+    const item = gameData.inventory.find(item => item.id === itemId);
+    if (item && item.slot) {
+        const popupBody = document.getElementById('popup-body');
+        const qualityData = equipmentQuality[item.quality];
+        
+        // 计算属性差异
+        const diff = calculateEquipmentDiff(item);
+        
+        // 构建主属性文本
+        let mainStatsText = '';
+        if (item.stats) {
+            for (const [stat, value] of Object.entries(item.stats)) {
+                const diffValue = diff[stat] || 0;
+                const diffText = diffValue > 0 ? `<span style="color: green;">+${diffValue}</span>` : diffValue < 0 ? `<span style="color: red;">${diffValue}</span>` : '';
+                mainStatsText += `${getStatName(stat)}+${value} ${diffText}<br>`;
+            }
+        }
+        
+        // 构建副属性文本
+        let subStatsText = '';
+        if (item.subStats) {
+            for (const [stat, value] of Object.entries(item.subStats)) {
+                const statNames = {
+                    woodBonus: '木材+',
+                    stoneBonus: '灵石+',
+                    expBonus: '修为+',
+                    crit: '暴击率+'
+                };
+                const diffValue = diff[stat] || 0;
+                const diffText = diffValue > 0 ? `<span style="color: green;">+${(diffValue * 100).toFixed(0)}%</span>` : diffValue < 0 ? `<span style="color: red;">${(diffValue * 100).toFixed(0)}%</span>` : '';
+                subStatsText += `${statNames[stat]}${((value || 0) * 100).toFixed(0)}% ${diffText}<br>`;
+            }
+        }
+        
+        popupBody.innerHTML = `
+            <h3>装备属性比较</h3>
+            <table>
+                <tr>
+                    <td>品质:</td>
+                    <td>${qualityData.color} ${item.quality}</td>
+                </tr>
+                <tr>
+                    <td>名称:</td>
+                    <td>${item.name}</td>
+                </tr>
+                <tr>
+                    <td>部位:</td>
+                    <td>${equipmentSlots[item.slot].name}</td>
+                </tr>
+                ${mainStatsText ? `<tr>
+                    <td>主属性:</td>
+                    <td>${mainStatsText}</td>
+                </tr>` : ''}
+                ${subStatsText ? `<tr>
+                    <td>副属性:</td>
+                    <td>${subStatsText}</td>
+                </tr>` : ''}
+                ${Object.keys(diff).length > 0 ? `<tr>
+                    <td>属性差异:</td>
+                    <td><span style="color: green;">绿色</span>表示增加，<span style="color: red;">红色</span>表示减少</td>
+                </tr>` : ''}
+            </table>
+            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <button onclick="equipFromInventory(${item.id}); closePopup();">装备</button>
+                <button onclick="closePopup();">取消</button>
+            </div>
+        `;
+        
+        document.getElementById('popup').style.display = 'block';
+    }
+}
+
 // 打开背包
 function openInventory() {
     const popupBody = document.getElementById('popup-body');
@@ -878,7 +993,7 @@ function openInventory() {
                 <tr>
                     <td>${item.name}</td>
                     <td>${item.count || 1}</td>
-                    <td>${item.slot ? `<button onclick="equipFromInventory(${item.id})">装备</button>` : '<button>使用</button>'}</td>
+                    <td>${item.slot ? `<button onclick="showEquipmentCompare(${item.id})">装备</button>` : '<button>使用</button>'}</td>
                 </tr>
             `).join('') : '<tr><td colspan="3">背包为空</td></tr>'}
         </table>
@@ -1839,51 +1954,123 @@ function updateCharacterStats() {
     // 计算攻击力
     let attack = gameData.stats.attack;
     if (gameData.equipment.weapon) {
-        attack += gameData.equipment.weapon.stats.atk;
+        attack += gameData.equipment.weapon.stats.atk || 0;
+        // 检查武器副属性
+        if (gameData.equipment.weapon.subStats) {
+            attack += gameData.equipment.weapon.subStats.atk || 0;
+        }
     }
     document.getElementById('attack-value').textContent = attack;
     
     // 计算生命值
     let hp = gameData.lifespan.max;
-    if (gameData.equipment.armor && gameData.equipment.armor.stats.hp) {
-        hp += gameData.equipment.armor.stats.hp;
+    if (gameData.equipment.armor) {
+        hp += gameData.equipment.armor.stats.hp || 0;
+        // 检查道袍副属性
+        if (gameData.equipment.armor.subStats) {
+            hp += gameData.equipment.armor.subStats.hp || 0;
+        }
     }
     document.getElementById('hp-value').textContent = hp;
     
     // 计算攻速
     let speed = 100;
-    if (gameData.equipment.ring && gameData.equipment.ring.stats.speed) {
-        speed += gameData.equipment.ring.stats.speed * 100;
+    if (gameData.equipment.ring) {
+        speed += (gameData.equipment.ring.stats.speed || 0) * 100;
+        // 检查戒指副属性
+        if (gameData.equipment.ring.subStats) {
+            speed += (gameData.equipment.ring.subStats.speed || 0) * 100;
+        }
     }
     document.getElementById('speed-value').textContent = `${speed.toFixed(0)}%`;
     
     // 计算幸运
     let luck = 0;
-    if (gameData.equipment.amulet && gameData.equipment.amulet.stats.luck) {
-        luck += gameData.equipment.amulet.stats.luck;
+    if (gameData.equipment.amulet) {
+        luck += gameData.equipment.amulet.stats.luck || 0;
+        // 检查护符副属性
+        if (gameData.equipment.amulet.subStats) {
+            luck += gameData.equipment.amulet.subStats.luck || 0;
+        }
     }
     document.getElementById('luck-value').textContent = luck;
     
     // 计算木材加成
     let woodBonus = 0;
-    if (gameData.equipment.armor && gameData.equipment.armor.stats.woodBonus) {
-        woodBonus += gameData.equipment.armor.stats.woodBonus * 100;
+    // 检查所有装备的木材加成副属性
+    if (gameData.equipment.armor) {
+        woodBonus += (gameData.equipment.armor.stats.woodBonus || 0) * 100;
+        if (gameData.equipment.armor.subStats) {
+            woodBonus += (gameData.equipment.armor.subStats.woodBonus || 0) * 100;
+        }
+    }
+    if (gameData.equipment.weapon && gameData.equipment.weapon.subStats) {
+        woodBonus += (gameData.equipment.weapon.subStats.woodBonus || 0) * 100;
+    }
+    if (gameData.equipment.ring && gameData.equipment.ring.subStats) {
+        woodBonus += (gameData.equipment.ring.subStats.woodBonus || 0) * 100;
+    }
+    if (gameData.equipment.amulet && gameData.equipment.amulet.subStats) {
+        woodBonus += (gameData.equipment.amulet.subStats.woodBonus || 0) * 100;
     }
     document.getElementById('wood-bonus-value').textContent = `${woodBonus.toFixed(0)}%`;
     
     // 计算灵石加成
     let stoneBonus = 0;
-    if (gameData.equipment.ring && gameData.equipment.ring.stats.stoneBonus) {
-        stoneBonus += gameData.equipment.ring.stats.stoneBonus * 100;
+    // 检查所有装备的灵石加成副属性
+    if (gameData.equipment.ring) {
+        stoneBonus += (gameData.equipment.ring.stats.stoneBonus || 0) * 100;
+        if (gameData.equipment.ring.subStats) {
+            stoneBonus += (gameData.equipment.ring.subStats.stoneBonus || 0) * 100;
+        }
+    }
+    if (gameData.equipment.weapon && gameData.equipment.weapon.subStats) {
+        stoneBonus += (gameData.equipment.weapon.subStats.stoneBonus || 0) * 100;
+    }
+    if (gameData.equipment.armor && gameData.equipment.armor.subStats) {
+        stoneBonus += (gameData.equipment.armor.subStats.stoneBonus || 0) * 100;
+    }
+    if (gameData.equipment.amulet && gameData.equipment.amulet.subStats) {
+        stoneBonus += (gameData.equipment.amulet.subStats.stoneBonus || 0) * 100;
     }
     document.getElementById('stone-bonus-value').textContent = `${stoneBonus.toFixed(0)}%`;
     
     // 计算修为加成
     let expBonus = 0;
-    if (gameData.equipment.amulet && gameData.equipment.amulet.stats.expBonus) {
-        expBonus += gameData.equipment.amulet.stats.expBonus * 100;
+    // 检查所有装备的修为加成副属性
+    if (gameData.equipment.amulet) {
+        expBonus += (gameData.equipment.amulet.stats.expBonus || 0) * 100;
+        if (gameData.equipment.amulet.subStats) {
+            expBonus += (gameData.equipment.amulet.subStats.expBonus || 0) * 100;
+        }
+    }
+    if (gameData.equipment.weapon && gameData.equipment.weapon.subStats) {
+        expBonus += (gameData.equipment.weapon.subStats.expBonus || 0) * 100;
+    }
+    if (gameData.equipment.armor && gameData.equipment.armor.subStats) {
+        expBonus += (gameData.equipment.armor.subStats.expBonus || 0) * 100;
+    }
+    if (gameData.equipment.ring && gameData.equipment.ring.subStats) {
+        expBonus += (gameData.equipment.ring.subStats.expBonus || 0) * 100;
     }
     document.getElementById('exp-bonus-value').textContent = `${expBonus.toFixed(0)}%`;
+    
+    // 计算暴击率
+    let crit = gameData.stats.crit * 100;
+    // 检查所有装备的暴击率副属性
+    if (gameData.equipment.weapon && gameData.equipment.weapon.subStats) {
+        crit += (gameData.equipment.weapon.subStats.crit || 0) * 100;
+    }
+    if (gameData.equipment.armor && gameData.equipment.armor.subStats) {
+        crit += (gameData.equipment.armor.subStats.crit || 0) * 100;
+    }
+    if (gameData.equipment.ring && gameData.equipment.ring.subStats) {
+        crit += (gameData.equipment.ring.subStats.crit || 0) * 100;
+    }
+    if (gameData.equipment.amulet && gameData.equipment.amulet.subStats) {
+        crit += (gameData.equipment.amulet.subStats.crit || 0) * 100;
+    }
+    document.getElementById('crit-value').textContent = `${crit.toFixed(1)}%`;
 }
 
 // 初始化游戏
