@@ -750,14 +750,68 @@ function strengthenWeapon() {
     const weapon = gameData.equipment.weapon;
     if (weapon) {
         const cost = 强化Cost(weapon.level);
-        if (gameData.resources.wood >= cost) {
-            gameData.resources.wood -= cost;
+        if (gameData.resources.强化石 >= cost) {
+            gameData.resources.强化石 -= cost;
             weapon.level++;
             weapon.stats.atk += 2; // 每级强化攻击+2
             updateUI();
             saveGame();
         } else {
-            alert("木材不足！");
+            alert("强化石不足！");
+        }
+    }
+}
+
+// 强化道袍
+function strengthenArmor() {
+    const armor = gameData.equipment.armor;
+    if (armor) {
+        const cost = 强化Cost(armor.level);
+        if (gameData.resources.强化石 >= cost) {
+            gameData.resources.强化石 -= cost;
+            armor.level++;
+            armor.stats.hp += 5; // 每级强化生命+5
+            if (armor.stats.woodBonus) armor.stats.woodBonus += 0.01; // 每级强化木材加成+1%
+            updateUI();
+            saveGame();
+        } else {
+            alert("强化石不足！");
+        }
+    }
+}
+
+// 强化戒指
+function strengthenRing() {
+    const ring = gameData.equipment.ring;
+    if (ring) {
+        const cost = 强化Cost(ring.level);
+        if (gameData.resources.强化石 >= cost) {
+            gameData.resources.强化石 -= cost;
+            ring.level++;
+            if (ring.stats.speed) ring.stats.speed += 0.01; // 每级强化攻速+1%
+            if (ring.stats.stoneBonus) ring.stats.stoneBonus += 0.01; // 每级强化灵石加成+1%
+            updateUI();
+            saveGame();
+        } else {
+            alert("强化石不足！");
+        }
+    }
+}
+
+// 强化护符
+function strengthenAmulet() {
+    const amulet = gameData.equipment.amulet;
+    if (amulet) {
+        const cost = 强化Cost(amulet.level);
+        if (gameData.resources.强化石 >= cost) {
+            gameData.resources.强化石 -= cost;
+            amulet.level++;
+            if (amulet.stats.luck) amulet.stats.luck += 1; // 每级强化幸运+1
+            if (amulet.stats.expBonus) amulet.stats.expBonus += 0.01; // 每级强化修为加成+1%
+            updateUI();
+            saveGame();
+        } else {
+            alert("强化石不足！");
         }
     }
 }
