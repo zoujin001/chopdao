@@ -138,7 +138,7 @@ const servantsData = [
 ];
 
 // 装备强化数据
-const强化Cost = (level) => {
+const strengthenCost = (level) => {
     return 50 * level;
 };
 
@@ -749,7 +749,7 @@ function breakthroughRealm() {
 function strengthenWeapon() {
     const weapon = gameData.equipment.weapon;
     if (weapon) {
-        const cost = 强化Cost(weapon.level);
+        const cost = strengthenCost(weapon.level);
         if (gameData.resources.强化石 >= cost) {
             gameData.resources.强化石 -= cost;
             weapon.level++;
@@ -766,7 +766,7 @@ function strengthenWeapon() {
 function strengthenArmor() {
     const armor = gameData.equipment.armor;
     if (armor) {
-        const cost = 强化Cost(armor.level);
+        const cost = strengthenCost(armor.level);
         if (gameData.resources.强化石 >= cost) {
             gameData.resources.强化石 -= cost;
             armor.level++;
@@ -784,7 +784,7 @@ function strengthenArmor() {
 function strengthenRing() {
     const ring = gameData.equipment.ring;
     if (ring) {
-        const cost = 强化Cost(ring.level);
+        const cost = strengthenCost(ring.level);
         if (gameData.resources.强化石 >= cost) {
             gameData.resources.强化石 -= cost;
             ring.level++;
@@ -802,7 +802,7 @@ function strengthenRing() {
 function strengthenAmulet() {
     const amulet = gameData.equipment.amulet;
     if (amulet) {
-        const cost = 强化Cost(amulet.level);
+        const cost = strengthenCost(amulet.level);
         if (gameData.resources.强化石 >= cost) {
             gameData.resources.强化石 -= cost;
             amulet.level++;
