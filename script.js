@@ -520,7 +520,8 @@ function manualRefreshShop() {
         gameData.resources.stone -= gameData.shop.refreshCost;
         refreshShop();
         updateUI();
-        alert('商店已刷新！');
+        // 重新打开商店界面以显示刷新后的物品
+        openShop();
     } else {
         alert('灵石不足！');
     }
@@ -1904,15 +1905,32 @@ function updateUI() {
     // 更新装备系统
     const weapon = gameData.equipment.weapon;
     document.getElementById('weapon-name').textContent = `${weapon.name} Lv.${weapon.level}`;
-    document.getElementById('weapon-stats').textContent = `⚔️ 攻击+${weapon.stats.atk}`;
+    let weaponStatsText = `⚔️ 攻击+${weapon.stats.atk || 0}`;
+    // 添加武器副属性
+    if (weapon.subStats) {
+        if (weapon.subStats.atk) weaponStatsText += ` ⚔️ 攻击+${weapon.subStats.atk}`;
+        if (weapon.subStats.woodBonus) weaponStatsText += ` 🪵 木材+${(weapon.subStats.woodBonus * 100).toFixed(0)}%`;
+        if (weapon.subStats.stoneBonus) weaponStatsText += ` 💎 灵石+${(weapon.subStats.stoneBonus * 100).toFixed(0)}%`;
+        if (weapon.subStats.expBonus) weaponStatsText += ` ⭐ 修为+${(weapon.subStats.expBonus * 100).toFixed(0)}%`;
+        if (weapon.subStats.crit) weaponStatsText += ` 💥 暴击率+${(weapon.subStats.crit * 100).toFixed(0)}%`;
+    }
+    document.getElementById('weapon-stats').textContent = weaponStatsText;
     
     // 更新道袍
     const armor = gameData.equipment.armor;
     if (armor) {
         document.getElementById('armor-name').textContent = `${armor.name} Lv.${armor.level}`;
-        const hp = armor.stats.hp || 0;
-        const woodBonus = (armor.stats.woodBonus || 0) * 100;
-        document.getElementById('armor-stats').textContent = `❤️ 生命+${hp} 🪵 木材+${woodBonus.toFixed(0)}%`;
+        let armorStatsText = `❤️ 生命+${armor.stats.hp || 0}`;
+        if (armor.stats.woodBonus) armorStatsText += ` 🪵 木材+${(armor.stats.woodBonus * 100).toFixed(0)}%`;
+        // 添加道袍副属性
+        if (armor.subStats) {
+            if (armor.subStats.hp) armorStatsText += ` ❤️ 生命+${armor.subStats.hp}`;
+            if (armor.subStats.woodBonus) armorStatsText += ` 🪵 木材+${(armor.subStats.woodBonus * 100).toFixed(0)}%`;
+            if (armor.subStats.stoneBonus) armorStatsText += ` 💎 灵石+${(armor.subStats.stoneBonus * 100).toFixed(0)}%`;
+            if (armor.subStats.expBonus) armorStatsText += ` ⭐ 修为+${(armor.subStats.expBonus * 100).toFixed(0)}%`;
+            if (armor.subStats.crit) armorStatsText += ` 💥 暴击率+${(armor.subStats.crit * 100).toFixed(0)}%`;
+        }
+        document.getElementById('armor-stats').textContent = armorStatsText;
     } else {
         document.getElementById('armor-name').textContent = "无";
         document.getElementById('armor-stats').textContent = "❤️ 生命+0 🪵 木材+0%";
@@ -1922,9 +1940,17 @@ function updateUI() {
     const ring = gameData.equipment.ring;
     if (ring) {
         document.getElementById('ring-name').textContent = `${ring.name} Lv.${ring.level}`;
-        const speed = (ring.stats.speed || 0) * 100;
-        const stoneBonus = (ring.stats.stoneBonus || 0) * 100;
-        document.getElementById('ring-stats').textContent = `⚡ 攻速+${speed.toFixed(0)}% 💎 灵石+${stoneBonus.toFixed(0)}%`;
+        let ringStatsText = `⚡ 攻速+${((ring.stats.speed || 0) * 100).toFixed(0)}%`;
+        if (ring.stats.stoneBonus) ringStatsText += ` 💎 灵石+${(ring.stats.stoneBonus * 100).toFixed(0)}%`;
+        // 添加戒指副属性
+        if (ring.subStats) {
+            if (ring.subStats.speed) ringStatsText += ` ⚡ 攻速+${(ring.subStats.speed * 100).toFixed(0)}%`;
+            if (ring.subStats.stoneBonus) ringStatsText += ` 💎 灵石+${(ring.subStats.stoneBonus * 100).toFixed(0)}%`;
+            if (ring.subStats.woodBonus) ringStatsText += ` 🪵 木材+${(ring.subStats.woodBonus * 100).toFixed(0)}%`;
+            if (ring.subStats.expBonus) ringStatsText += ` ⭐ 修为+${(ring.subStats.expBonus * 100).toFixed(0)}%`;
+            if (ring.subStats.crit) ringStatsText += ` 💥 暴击率+${(ring.subStats.crit * 100).toFixed(0)}%`;
+        }
+        document.getElementById('ring-stats').textContent = ringStatsText;
     } else {
         document.getElementById('ring-name').textContent = "无";
         document.getElementById('ring-stats').textContent = "⚡ 攻速+0% 💎 灵石+0%";
@@ -1934,9 +1960,17 @@ function updateUI() {
     const amulet = gameData.equipment.amulet;
     if (amulet) {
         document.getElementById('amulet-name').textContent = `${amulet.name} Lv.${amulet.level}`;
-        const luck = amulet.stats.luck || 0;
-        const expBonus = (amulet.stats.expBonus || 0) * 100;
-        document.getElementById('amulet-stats').textContent = `🍀 幸运+${luck} ⭐ 修为+${expBonus.toFixed(0)}%`;
+        let amuletStatsText = `🍀 幸运+${amulet.stats.luck || 0}`;
+        if (amulet.stats.expBonus) amuletStatsText += ` ⭐ 修为+${(amulet.stats.expBonus * 100).toFixed(0)}%`;
+        // 添加护符副属性
+        if (amulet.subStats) {
+            if (amulet.subStats.luck) amuletStatsText += ` 🍀 幸运+${amulet.subStats.luck}`;
+            if (amulet.subStats.expBonus) amuletStatsText += ` ⭐ 修为+${(amulet.subStats.expBonus * 100).toFixed(0)}%`;
+            if (amulet.subStats.woodBonus) amuletStatsText += ` 🪵 木材+${(amulet.subStats.woodBonus * 100).toFixed(0)}%`;
+            if (amulet.subStats.stoneBonus) amuletStatsText += ` 💎 灵石+${(amulet.subStats.stoneBonus * 100).toFixed(0)}%`;
+            if (amulet.subStats.crit) amuletStatsText += ` 💥 暴击率+${(amulet.subStats.crit * 100).toFixed(0)}%`;
+        }
+        document.getElementById('amulet-stats').textContent = amuletStatsText;
     } else {
         document.getElementById('amulet-name').textContent = "无";
         document.getElementById('amulet-stats').textContent = "🍀 幸运+0 ⭐ 修为+0%";
