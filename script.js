@@ -1088,60 +1088,73 @@ function openShop() {
         
         shopItemsHtml += `
             <tr>
-                <td>${qualityData.color} ${item.name}</td>
-                <td>${slotName}<br>${mainStat}+${mainStatValue}<br>${subStatsText}</td>
-                <td>💎 ${item.price}灵石</td>
-                <td><button onclick="buyShopItem(${item.id})">购买</button></td>
+                <td style="padding: 8px; text-align: center;">${qualityData.color} ${item.name}</td>
+                <td style="padding: 8px; text-align: left;">
+                    <div>部位: ${slotName}</div>
+                    <div>主属性: ${mainStat}+${mainStatValue}</div>
+                    ${subStatsText ? `<div>副属性: ${subStatsText}</div>` : ''}
+                </td>
+                <td style="padding: 8px; text-align: center; font-weight: bold;">💎 ${item.price}</td>
+                <td style="padding: 8px; text-align: center;"><button onclick="buyShopItem(${item.id})" style="padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">购买</button></td>
             </tr>
         `;
     });
     
     popupBody.innerHTML = `
-        <h3>🛒 商店</h3>
-        <p>下次自动刷新: ${nextRefreshTime}</p>
-        <button onclick="manualRefreshShop()" style="margin-bottom: 10px;">手动刷新 (${gameData.shop.refreshCost}灵石)</button>
-        <table>
-            <tr>
-                <th>装备</th>
-                <th>属性</th>
-                <th>价格</th>
-                <th>操作</th>
-            </tr>
-            ${shopItemsHtml}
-        </table>
-        <h4 style="margin-top: 20px;">消耗品</h4>
-        <table>
-            <tr>
-                <th>道具</th>
-                <th>效果</th>
-                <th>价格</th>
-                <th>操作</th>
-            </tr>
-            <tr>
-                <td>⚡ 突破丹</td>
-                <td>境界突破必备</td>
-                <td>💎 1000灵石</td>
-                <td><button onclick="buyItem('突破丹', 1000)">购买</button></td>
-            </tr>
-            <tr>
-                <td>🔨 强化石</td>
-                <td>装备强化材料</td>
-                <td>💎 100灵石</td>
-                <td><button onclick="buyItem('强化石', 100, 10)">购买×10</button></td>
-            </tr>
-            <tr>
-                <td>🧬 延寿丹</td>
-                <td>寿元+50</td>
-                <td>💎 500灵石</td>
-                <td><button onclick="buyItem('延寿丹', 500)">购买</button></td>
-            </tr>
-            <tr>
-                <td>🐾 灵宠经验丹</td>
-                <td>灵宠升级</td>
-                <td>💎 200灵石</td>
-                <td><button onclick="buyItem('灵宠经验丹', 200, 10)">购买×10</button></td>
-            </tr>
-        </table>
+        <h3 style="text-align: center; margin-bottom: 15px;">🛒 商店</h3>
+        <div style="margin-bottom: 15px; text-align: center;">
+            <p style="margin-bottom: 10px;">下次自动刷新: ${nextRefreshTime}</p>
+            <button onclick="manualRefreshShop()" style="padding: 8px 16px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">手动刷新 (${gameData.shop.refreshCost}灵石)</button>
+        </div>
+        
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">装备</h4>
+        <div style="overflow-x: auto; margin-bottom: 20px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">装备</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">属性</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">价格</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">操作</th>
+                </tr>
+                ${shopItemsHtml}
+            </table>
+        </div>
+        
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">消耗品</h4>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">道具</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">效果</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">价格</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">操作</th>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; text-align: center;">⚡ 突破丹</td>
+                    <td style="padding: 8px; text-align: left;">境界突破必备</td>
+                    <td style="padding: 8px; text-align: center; font-weight: bold;">💎 1000</td>
+                    <td style="padding: 8px; text-align: center;"><button onclick="buyItem('突破丹', 1000)" style="padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">购买</button></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; text-align: center;">🔨 强化石</td>
+                    <td style="padding: 8px; text-align: left;">装备强化材料</td>
+                    <td style="padding: 8px; text-align: center; font-weight: bold;">💎 100</td>
+                    <td style="padding: 8px; text-align: center;"><button onclick="buyItem('强化石', 100, 10)" style="padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">购买×10</button></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; text-align: center;">🧬 延寿丹</td>
+                    <td style="padding: 8px; text-align: left;">寿元+50</td>
+                    <td style="padding: 8px; text-align: center; font-weight: bold;">💎 500</td>
+                    <td style="padding: 8px; text-align: center;"><button onclick="buyItem('延寿丹', 500)" style="padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">购买</button></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; text-align: center;">🐾 灵宠经验丹</td>
+                    <td style="padding: 8px; text-align: left;">灵宠升级</td>
+                    <td style="padding: 8px; text-align: center; font-weight: bold;">💎 200</td>
+                    <td style="padding: 8px; text-align: center;"><button onclick="buyItem('灵宠经验丹', 200, 10)" style="padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">购买×10</button></td>
+                </tr>
+            </table>
+        </div>
     `;
     document.getElementById('popup').style.display = 'block';
 }
@@ -1720,7 +1733,9 @@ function updateUI() {
     const armor = gameData.equipment.armor;
     if (armor) {
         document.getElementById('armor-name').textContent = `${armor.name} Lv.${armor.level}`;
-        document.getElementById('armor-stats').textContent = `❤️ 生命+${armor.stats.hp} 🪵 木材+${(armor.stats.woodBonus * 100).toFixed(0)}%`;
+        const hp = armor.stats.hp || 0;
+        const woodBonus = (armor.stats.woodBonus || 0) * 100;
+        document.getElementById('armor-stats').textContent = `❤️ 生命+${hp} 🪵 木材+${woodBonus.toFixed(0)}%`;
     } else {
         document.getElementById('armor-name').textContent = "无";
         document.getElementById('armor-stats').textContent = "❤️ 生命+0 🪵 木材+0%";
@@ -1730,7 +1745,9 @@ function updateUI() {
     const ring = gameData.equipment.ring;
     if (ring) {
         document.getElementById('ring-name').textContent = `${ring.name} Lv.${ring.level}`;
-        document.getElementById('ring-stats').textContent = `⚡ 攻速+${(ring.stats.speed * 100).toFixed(0)}% 💎 灵石+${(ring.stats.stoneBonus * 100).toFixed(0)}%`;
+        const speed = (ring.stats.speed || 0) * 100;
+        const stoneBonus = (ring.stats.stoneBonus || 0) * 100;
+        document.getElementById('ring-stats').textContent = `⚡ 攻速+${speed.toFixed(0)}% 💎 灵石+${stoneBonus.toFixed(0)}%`;
     } else {
         document.getElementById('ring-name').textContent = "无";
         document.getElementById('ring-stats').textContent = "⚡ 攻速+0% 💎 灵石+0%";
@@ -1740,7 +1757,9 @@ function updateUI() {
     const amulet = gameData.equipment.amulet;
     if (amulet) {
         document.getElementById('amulet-name').textContent = `${amulet.name} Lv.${amulet.level}`;
-        document.getElementById('amulet-stats').textContent = `🍀 幸运+${amulet.stats.luck} ⭐ 修为+${(amulet.stats.expBonus * 100).toFixed(0)}%`;
+        const luck = amulet.stats.luck || 0;
+        const expBonus = (amulet.stats.expBonus || 0) * 100;
+        document.getElementById('amulet-stats').textContent = `🍀 幸运+${luck} ⭐ 修为+${expBonus.toFixed(0)}%`;
     } else {
         document.getElementById('amulet-name').textContent = "无";
         document.getElementById('amulet-stats').textContent = "🍀 幸运+0 ⭐ 修为+0%";
